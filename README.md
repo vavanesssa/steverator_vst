@@ -143,38 +143,38 @@ By the end of v1, the project should allow you to understand:
 
 ### Phase 1 — Audio Pass-through 🔊
 *Goal: Verify sound passes through the plugin without modification*
-*   [ ] Implement `processBlock`.
-*   [ ] Ensure sound is unchanged.
-*   [ ] Load plugin in DAW.
-*   [ ] Document audio flow.
+*   [x] Implement `processBlock`.
+*   [x] Ensure sound is unchanged.
+*   [x] Load plugin in DAW.
+*   [x] Document audio flow.
 
 ### Phase 2 — Parameters 🎚️
 *Goal: Control sound via parameters*
-*   [ ] Create Drive and Output parameters.
-*   [ ] Link parameters to audio engine.
-*   [ ] Verify automation.
-*   [ ] Comment parameter system.
+*   [x] Create Drive and Output parameters.
+*   [x] Link parameters to audio engine.
+*   [x] Verify automation.
+*   [x] Comment parameter system.
 
 ### Phase 3 — Saturation 🔥
 *Goal: Add audible and controllable saturation*
-*   [ ] Implement saturation function.
-*   [ ] Handle gain staging.
-*   [ ] Test at different levels.
-*   [ ] Document DSP.
+*   [x] Implement saturation function.
+*   [x] Handle gain staging.
+*   [x] Test at different levels.
+*   [x] Document DSP.
 
 ### Phase 4 — Minimal UI 🎨
 *Goal: Functional and modifiable interface*
-*   [ ] Create sliders.
-*   [ ] Link UI ↔ Parameters.
-*   [ ] Structure UI code.
-*   [ ] Comment visual choices.
+*   [x] Create sliders.
+*   [x] Link UI ↔ Parameters.
+*   [x] Structure UI code.
+*   [x] Comment visual choices.
 
 ### Phase 5 — Stabilization 🧪
 *Goal: Stable and understandable plugin*
-*   [ ] Test at different sample rates.
-*   [ ] Buffer size tests.
-*   [ ] Code cleanup.
-*   [ ] Full documentation update.
+*   [x] Test at different sample rates.
+*   [x] Buffer size tests.
+*   [x] Code cleanup.
+*   [x] Full documentation update.
 
 ---
 
