@@ -14,7 +14,10 @@
 //==============================================================================
 Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
     Vst_saturatorAudioProcessor &p)
-    : AudioProcessorEditor(&p), audioProcessor(p) {
+    : AudioProcessorEditor(&p), audioProcessor(p), tooltipWindow(this, 1500) {
+  // Ensure the tooltip window uses our custom LookAndFeel for drawing
+  tooltipWindow.setLookAndFeel(&customLookAndFeel);
+
   // Load build hash from version.txt
   juce::File versionFile;
   auto appDir =
@@ -85,12 +88,13 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   }
 
   // Helper lambda for configuring sliders
-  auto configureSlider = [&](juce::Slider &slider,
-                             const juce::String &paramID) {
+  auto configureSlider = [&](juce::Slider &slider, const juce::String &paramID,
+                             const juce::String &tooltip) {
     slider.setLookAndFeel(&customLookAndFeel);
     slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
     slider.setTextBoxStyle(juce::Slider::NoTextBox, false, 0,
                            0); // Hide text box
+    slider.setTooltip(tooltip);
     addAndMakeVisible(slider);
   };
 
@@ -110,9 +114,11 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   };
 
   auto configureEnableButton = [&](juce::ToggleButton &button,
-                                   const juce::String &text) {
+                                   const juce::String &text,
+                                   const juce::String &tooltip) {
     button.setButtonText(text);
     button.setLookAndFeel(&customLookAndFeel);
+    button.setTooltip(tooltip);
     addAndMakeVisible(button);
   };
 
@@ -128,11 +134,16 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   };
 
   // A. Saturation Globale
-  configureSlider(saturationSlider, "drive");
+  // A. Saturation Globale
+  configureSlider(
+      saturationSlider, "drive",
+      juce::CharPointer_UTF8("Contrôle la quantité de saturation globale"));
   configureLabel(saturationLabel, "Saturation");
   saturationLabel.attachToComponent(&saturationSlider, false);
 
-  configureSlider(shapeSlider, "shape");
+  configureSlider(shapeSlider, "shape",
+                  juce::CharPointer_UTF8(
+                      "Modifie la couleur et l'agressivité de la distorsion"));
   configureLabel(shapeLabel, "Shape");
   shapeLabel.attachToComponent(&shapeSlider, false);
 
@@ -144,6 +155,8 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
        "Soft Sat."},
       1);
   waveshapeCombo.setLookAndFeel(&customLookAndFeel);
+  waveshapeCombo.setTooltip(
+      juce::CharPointer_UTF8("Choisissez le type d'algorithme de saturation"));
   addAndMakeVisible(waveshapeCombo);
   configureLabel(waveshapeLabel, "WAVE");
   waveshapeLabel.attachToComponent(&waveshapeCombo, false);
@@ -155,18 +168,27 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
           audioProcessor.apvts, "waveshape", waveshapeCombo);
 
   // B. Bande LOW
-  configureEnableButton(lowEnableButton, "LOW");
+  configureEnableButton(
+      lowEnableButton, "LOW",
+      juce::CharPointer_UTF8(
+          "Active/Désactive le traitement de la bande basse"));
   attachButton(lowEnableAttachment, "lowEnable", lowEnableButton);
 
-  configureSlider(lowFreqSlider, "lowFreq");
+  configureSlider(lowFreqSlider, "lowFreq",
+                  juce::CharPointer_UTF8(
+                      "Fréquence de coupure de la bande basse (Crossover)"));
   configureLabel(lowFreqLabel, "Low Freq");
   lowFreqLabel.attachToComponent(&lowFreqSlider, false);
 
-  configureSlider(lowWarmthSlider, "lowWarmth");
+  configureSlider(
+      lowWarmthSlider, "lowWarmth",
+      juce::CharPointer_UTF8(
+          "Ajoute de la chaleur et du corps aux basses fréquences"));
   configureLabel(lowWarmthLabel, "Low Warmth");
   lowWarmthLabel.attachToComponent(&lowWarmthSlider, false);
 
-  configureSlider(lowLevelSlider, "lowLevel");
+  configureSlider(lowLevelSlider, "lowLevel",
+                  juce::CharPointer_UTF8("Volume de sortie de la bande basse"));
   configureLabel(lowLevelLabel, "Low Level");
   lowLevelLabel.attachToComponent(&lowLevelSlider, false);
 
@@ -175,18 +197,26 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   attachSlider(lowLevelAttachment, "lowLevel", lowLevelSlider);
 
   // C. Bande HIGH
-  configureEnableButton(highEnableButton, "HIGH");
+  configureEnableButton(
+      highEnableButton, "HIGH",
+      juce::CharPointer_UTF8(
+          "Active/Désactive le traitement de la bande haute"));
   attachButton(highEnableAttachment, "highEnable", highEnableButton);
 
-  configureSlider(highFreqSlider, "highFreq");
+  configureSlider(highFreqSlider, "highFreq",
+                  juce::CharPointer_UTF8(
+                      "Fréquence de coupure de la bande haute (Crossover)"));
   configureLabel(highFreqLabel, "High Freq");
   highFreqLabel.attachToComponent(&highFreqSlider, false);
 
-  configureSlider(highSoftnessSlider, "highSoftness");
+  configureSlider(
+      highSoftnessSlider, "highSoftness",
+      juce::CharPointer_UTF8("Adoucit les hautes fréquences (effet ''Tape'')"));
   configureLabel(highSoftnessLabel, "High Softness");
   highSoftnessLabel.attachToComponent(&highSoftnessSlider, false);
 
-  configureSlider(highLevelSlider, "highLevel");
+  configureSlider(highLevelSlider, "highLevel",
+                  juce::CharPointer_UTF8("Volume de sortie de la bande haute"));
   configureLabel(highLevelLabel, "High Level");
   highLevelLabel.attachToComponent(&highLevelSlider, false);
 
@@ -195,15 +225,18 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   attachSlider(highLevelAttachment, "highLevel", highLevelSlider);
 
   // D. Gain & Routing
-  configureSlider(inputGainSlider, "inputGain");
+  configureSlider(inputGainSlider, "inputGain",
+                  juce::CharPointer_UTF8("Gain d'entrée avant le traitement"));
   configureLabel(inputGainLabel, "Input");
   inputGainLabel.attachToComponent(&inputGainSlider, false);
 
-  configureSlider(mixSlider, "mix");
+  configureSlider(mixSlider, "mix",
+                  juce::CharPointer_UTF8("Mélange Dry/Wet du signal global"));
   configureLabel(mixLabel, "Mix");
   mixLabel.attachToComponent(&mixSlider, false);
 
-  configureSlider(outputGainSlider, "output");
+  configureSlider(outputGainSlider, "output",
+                  juce::CharPointer_UTF8("Gain de sortie final"));
   configureLabel(outputGainLabel, "Output");
   outputGainLabel.attachToComponent(&outputGainSlider, false);
 
@@ -214,16 +247,22 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   // Footer buttons with custom styling
   prePostButton.setButtonText("Pre/Post");
   prePostButton.setLookAndFeel(&customLookAndFeel);
+  prePostButton.setTooltip(juce::CharPointer_UTF8(
+      "Place le gain d'entrée avant ou après la saturation"));
   addAndMakeVisible(prePostButton);
   attachButton(prePostAttachment, "prePost", prePostButton);
 
   limiterButton.setButtonText("Limiter");
   limiterButton.setLookAndFeel(&customLookAndFeel);
+  limiterButton.setTooltip(
+      juce::CharPointer_UTF8("Active le limiteur de sécurité en sortie"));
   addAndMakeVisible(limiterButton);
   attachButton(limiterAttachment, "limiter", limiterButton);
 
   bypassButton.setButtonText("Bypass");
   bypassButton.setLookAndFeel(&customLookAndFeel);
+  bypassButton.setTooltip(
+      juce::CharPointer_UTF8("Désactive tout le traitement"));
   addAndMakeVisible(bypassButton);
   attachButton(bypassAttachment, "bypass", bypassButton);
 
