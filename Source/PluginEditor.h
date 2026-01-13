@@ -98,5 +98,8 @@ private:
     // Build hash for display
     juce::String buildHash;
 
+    // Helper to transform design coordinates to scaled window coordinates
+    juce::Rectangle<int> scaleDesignBounds(int x, int y, int width, int height) const;
+
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Vst_saturatorAudioProcessorEditor)
 };
