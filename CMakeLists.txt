@@ -5,6 +5,9 @@ cmake_minimum_required(VERSION 3.15)
 # -----------------------------------------------------------------------------
 project(vst_saturator VERSION 0.0.1)
 
+# Build Universal Binary (Apple Silicon + Intel) for maximum compatibility
+set(CMAKE_OSX_ARCHITECTURES "arm64;x86_64")
+
 # -----------------------------------------------------------------------------
 # 🧱 JUCE Configuration
 # -----------------------------------------------------------------------------
@@ -34,8 +37,12 @@ juce_add_plugin(vst_saturator
     COMPANY_NAME "MyEducationalPlugins"
     # The plugin code (must be unique 4 chars)
     PLUGIN_CODE "VsEd"
+    # Manufacturer code (must be unique 4 chars)
+    MANUFACTURER_CODE "MyEd"
+    # Bundle Identifier (Important for macOS)
+    BUNDLE_ID "com.myeducationalplugins.vst_saturator"
     # Formats to build
-    FORMATS VST3
+    FORMATS VST3 Standalone
     # Name of the product
     PRODUCT_NAME "vst_saturator"
     # Plugin Type (Effect, Synth, etc.)
@@ -43,6 +50,8 @@ juce_add_plugin(vst_saturator
     NEEDS_MIDI_INPUT FALSE
     NEEDS_MIDI_OUTPUT FALSE
     IS_MIDI_EFFECT FALSE
+    # Version
+    VERSION "0.0.1"
 )
 
 # -----------------------------------------------------------------------------

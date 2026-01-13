@@ -178,6 +178,65 @@ By the end of v1, the project should allow you to understand:
 
 ---
 
+## 🔧 Development Workflow
+
+### Quick Build & Deploy
+
+For development, use the automated build script:
+
+```bash
+cd /Users/vava/Documents/GitHub/vst_saturator
+./build_and_deploy.sh
+```
+
+This script:
+- Generates a **unique 5-character build hash** (e.g., `A3F7K`)
+- Compiles the plugin (Release mode) with the hash embedded
+- Deploys to `/Library/Audio/Plug-Ins/VST3/vst_saturator2.vst3`
+- Copies all assets (images, etc.)
+- Signs the plugin
+- Clears all Ableton caches
+
+**Build Hash (Important for Testing):**
+
+After running the script, you'll see:
+```
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+✨ BUILD COMPLETE!
+
+🔑 BUILD HASH: A3F7K
+━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━━
+```
+
+**The build hash appears at the bottom of the plugin UI.** This ensures you're testing the fresh version, not a cached one.
+
+**After running the script:**
+1. Restart Ableton completely (Cmd+Q)
+2. Reopen Ableton
+3. Rescan plugins in Preferences → File/Folder → Rescan
+4. Search for "vst_saturator2" in the plugin browser
+5. **Open the plugin and check the build hash at the bottom**
+6. It should match the hash shown in the terminal output
+
+If you see an old hash or "DEV", your cache wasn't cleared properly. Run the script again.
+
+### Image Assets
+
+UI images are stored in `/Assets/`:
+- **background.png** - Main UI background (high resolution)
+- **knob.png** - Rotary slider knob image (1024x1024 recommended, must be square)
+
+Images are:
+- Loaded at startup
+- Dynamically resized to match plugin window size
+- Cached for performance
+
+To update images:
+1. Replace files in `/Assets/`
+2. Run `./build_and_deploy.sh`
+
+---
+
 ## 📝 Documentation & Comments (Mandatory)
 
 All code must be:

@@ -3,7 +3,12 @@
 
     CustomLookAndFeel.cpp
     ---------------------
-    Implementation of custom UI styling.
+    Implementation of custom UI styling for knob rotations.
+
+    This class handles:
+    - Loading the knob image from assets
+    - Resizing it dynamically based on slider bounds
+    - Rotating it around its center with high quality
 
   ==============================================================================
 */
@@ -33,24 +38,27 @@ CustomLookAndFeel::CustomLookAndFeel()
     {
         // Fallback: Create a simple colored circle if image not found
         int size = 120;
-        knobImage = juce::Image(juce::Image::RGB, size, size, true);
+        knobImage = juce::Image(juce::Image::ARGB, size, size, true);
         juce::Graphics g(knobImage);
 
         // Draw a gradient circle as fallback
-        g.setColour(juce::Colours::orange);
-        g.fillEllipse(10, 10, size - 20, size - 20);
+        g.setColour(juce::Colours::orange.withAlpha(1.0f));
+        g.fillEllipse(10.0f, 10.0f, (float)size - 20.0f, (float)size - 20.0f);
 
         g.setColour(juce::Colours::white);
-        g.drawEllipse(10, 10, size - 20, size - 20, 2.0f);
+        g.drawEllipse(10.0f, 10.0f, (float)size - 20.0f, (float)size - 20.0f, 2.0f);
     }
 }
 
 juce::Image CustomLookAndFeel::getResizedKnob(int targetSize)
 {
+    // Ensure minimum size
+    int clampedSize = juce::jmax(40, targetSize);
+
     // Check if we already have this size cached
-    if (resizedKnobCache.find(targetSize) != resizedKnobCache.end())
+    if (resizedKnobCache.find(clampedSize) != resizedKnobCache.end())
     {
-        return resizedKnobCache[targetSize];
+        return resizedKnobCache[clampedSize];
     }
 
     // If no image, return empty
@@ -59,15 +67,23 @@ juce::Image CustomLookAndFeel::getResizedKnob(int targetSize)
         return juce::Image();
     }
 
-    // Create a resized version of the knob
-    juce::Image resized(juce::Image::ARGB, targetSize, targetSize, true);
-    juce::Graphics g(resized);
+    // Create a high-quality resized version of the knob
+    // Use ARGB to preserve alpha channel for transparency
+    juce::Image resized(juce::Image::ARGB, clampedSize, clampedSize, true);
 
-    // Use HighQualityScalingMode for better downscaling
-    g.drawImage(knobImage, 0, 0, targetSize, targetSize, 0, 0, knobImage.getWidth(), knobImage.getHeight(), false);
+    // Use high-quality scaling
+    juce::Graphics g(resized);
+    g.setImageResamplingQuality(juce::Graphics::highResamplingQuality);
+
+    // Draw the knob image stretched to fill the square
+    // Source: entire knob image, Destination: entire resized square
+    g.drawImage(knobImage,
+                0, 0, clampedSize, clampedSize,  // Destination (in resized image)
+                0, 0, knobImage.getWidth(), knobImage.getHeight(),  // Source
+                false);  // Don't use transparency as fill
 
     // Cache it for future use
-    resizedKnobCache[targetSize] = resized;
+    resizedKnobCache[clampedSize] = resized;
 
     return resized;
 }
@@ -85,28 +101,39 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics& g,
     // If we have a knob image, draw it rotated
     if (!knobImage.isNull())
     {
-        // Use the smaller of width and height to create a square knob
-        int knobSize = juce::jmin(width, height);
+        // Calculate the knob size (square, based on available space)
+        // Leave some padding for text/value display
+        int knobSize = juce::jmin(width, height) - 4;
+        knobSize = juce::jmax(40, knobSize);  // Minimum size
 
         // Get the resized knob (cached for performance)
         juce::Image resizedKnob = getResizedKnob(knobSize);
 
         if (!resizedKnob.isNull())
         {
-            int centerX = x + width / 2;
-            int centerY = y + height / 2;
+            // Calculate center position within the provided bounds
+            float centerX = (float)x + (float)width / 2.0f;
+            float centerY = (float)y + (float)height / 2.0f;
 
-            // Draw the knob image rotated
-            juce::AffineTransform transform = juce::AffineTransform::translation((float)centerX, (float)centerY)
-                                             .rotated(angle)
-                                             .translated(-(float)(knobSize / 2), -(float)(knobSize / 2));
+            // Create a transformation matrix:
+            // 1. Translate to origin (top-left at 0,0)
+            // 2. Rotate around the image center
+            // 3. Translate to final position
+            //
+            // IMPORTANT: Matrix operations are applied right-to-left!
+            // So we apply: Translate(final pos) * Rotate(center) * Translate(origin)
+
+            juce::AffineTransform transform = juce::AffineTransform()
+                .translated((float)(-knobSize / 2), (float)(-knobSize / 2))  // Move image origin to center
+                .rotated(angle)  // Rotate around origin (which is now the center)
+                .translated(centerX, centerY);  // Move to final position
 
             g.drawImageTransformed(resizedKnob, transform);
         }
     }
     else
     {
-        // Fallback: use default drawing
+        // Fallback: use default JUCE drawing
         LookAndFeel_V4::drawRotarySlider(g, x, y, width, height,
                                         sliderPosProportional,
                                         rotaryStartAngle, rotaryEndAngle, slider);
