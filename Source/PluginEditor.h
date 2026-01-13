@@ -38,25 +38,42 @@ public:
     void resized() override;
 
 private:
-    // Reference to the AudioProcessor (logic)
     Vst_saturatorAudioProcessor& audioProcessor;
 
-    // Phase 4: UI Components
-    // -------------------------------------------------------------------------
-    // Sliders
-    juce::Slider driveSlider;
-    juce::Slider outputSlider;
+    // A. Saturation Globale
+    juce::Slider saturationSlider, shapeSlider;
+    juce::Label saturationLabel, shapeLabel;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> saturationAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> shapeAttachment;
 
-    // Labels (to show which slider is which)
-    juce::Label driveLabel;
-    juce::Label outputLabel;
+    // B. Bande LOW
+    juce::ToggleButton lowEnableButton;
+    juce::Slider lowFreqSlider, lowWarmthSlider, lowLevelSlider;
+    juce::Label lowFreqLabel, lowWarmthLabel, lowLevelLabel;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> lowEnableAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lowFreqAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lowWarmthAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> lowLevelAttachment;
 
-    // Attachments
-    // These objects link the Slider to the APVTS parameter.
-    // They handle updating the slider when automation happens,
-    // and updating the parameter when the slider moves.
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> driveAttachment;
-    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> outputAttachment;
+    // C. Bande HIGH
+    juce::ToggleButton highEnableButton;
+    juce::Slider highFreqSlider, highSoftnessSlider, highLevelSlider;
+    juce::Label highFreqLabel, highSoftnessLabel, highLevelLabel;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> highEnableAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> highFreqAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> highSoftnessAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> highLevelAttachment;
+
+    // D. Gain & Routing
+    juce::Slider inputGainSlider, mixSlider, outputGainSlider;
+    juce::Label inputGainLabel, mixLabel, outputGainLabel;
+    juce::ToggleButton prePostButton, limiterButton, bypassButton;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> inputGainAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> mixAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment> outputGainAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> prePostAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> limiterAttachment;
+    std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment> bypassAttachment;
 
     // Custom UI styling
     CustomLookAndFeel customLookAndFeel;

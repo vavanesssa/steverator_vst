@@ -19,6 +19,7 @@
 #pragma once
 
 #include <JuceHeader.h>
+#include <juce_dsp/juce_dsp.h>
 
 //==============================================================================
 class Vst_saturatorAudioProcessor  : public juce::AudioProcessor
@@ -82,6 +83,29 @@ public:
 private:
     // Helper function to define the parameters layout
     juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();
+
+    // --- DSP Member Variables ---
+
+    // 3-Band Crossover using Linkwitz-Riley filters
+    using Filter = juce::dsp::LinkwitzRileyFilter<float>;
+    Filter lp1, hp1, lp2, hp2; // Four filters for a 3-band split
+
+    // Audio buffers for split-band processing
+    juce::AudioBuffer<float> lowBuffer, midBuffer, highBuffer;
+
+    // Previous parameter values to avoid unnecessary updates in the audio thread
+    float lastLowFreq = 0.0f;
+    float lastHighFreq = 0.0f;
+    double lastSampleRate = 0.0;
+
+    // Soft Limiter
+    juce::dsp::Limiter<float> limiter;
+
+    // DC Blocker for the low band
+    juce::dsp::DCBlocker<float> dcBlocker;
+
+    // Oversampling for non-aliased saturation
+    juce::dsp::Oversampling<float> oversampling;
 
     //==============================================================================
     JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR (Vst_saturatorAudioProcessor)

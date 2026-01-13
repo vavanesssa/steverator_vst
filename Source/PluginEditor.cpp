@@ -15,17 +15,14 @@
 Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor (Vst_saturatorAudioProcessor& p)
     : AudioProcessorEditor (&p), audioProcessor (p)
 {
-    // Phase 4: Setting up the UI
-    // -------------------------------------------------------------------------
-
-    // Load background image from plugin's Resources folder
+    // --- Background Image ---
+    // A robust way to load assets in a plugin
     juce::File backgroundFile;
+    // Check the plugin's own resource bundle first (macOS/iOS)
+    auto bundle = juce::File::getSpecialLocation(juce::File::currentApplicationFile);
+    backgroundFile = bundle.getChildFile("Contents/Resources/background.png");
 
-    // First try: Bundle Resources folder (macOS VST3)
-    auto appDir = juce::File::getSpecialLocation(juce::File::currentApplicationFile);
-    backgroundFile = appDir.getChildFile("Contents/Resources/background.png");
-
-    // Fallback: Try Assets in current working directory
+    // Fallback to a relative path for development/other platforms
     if (!backgroundFile.existsAsFile())
     {
         backgroundFile = juce::File::getCurrentWorkingDirectory().getChildFile("Assets/background.png");
@@ -36,38 +33,102 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor (Vst_satura
         backgroundImage = juce::ImageFileFormat::loadFrom(backgroundFile);
     }
 
-    // Apply custom LookAndFeel to sliders
-    driveSlider.setLookAndFeel(&customLookAndFeel);
-    outputSlider.setLookAndFeel(&customLookAndFeel);
+    // Helper lambda for configuring sliders
+    auto configureSlider = [&](juce::Slider& slider, const juce::String& paramID)
+    {
+        slider.setLookAndFeel(&customLookAndFeel);
+        slider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
+        slider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 60, 20);
+        addAndMakeVisible(slider);
+    };
 
-    // 1. Configure Drive Slider
-    driveSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    driveSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
-    addAndMakeVisible(driveSlider);
+    // Helper lambda for attachments
+    auto attachSlider = [&](auto& attachment, const juce::String& paramID, juce::Slider& slider)
+    {
+        attachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(audioProcessor.apvts, paramID, slider);
+    };
 
-    driveLabel.setText("Drive", juce::dontSendNotification);
-    driveLabel.setJustificationType(juce::Justification::centred);
-    driveLabel.attachToComponent(&driveSlider, false);
+    auto attachButton = [&](auto& attachment, const juce::String& paramID, juce::ToggleButton& button)
+    {
+        attachment = std::make_unique<juce::AudioProcessorValueTreeState::ButtonAttachment>(audioProcessor.apvts, paramID, button);
+    };
 
-    // 2. Configure Output Slider
-    outputSlider.setSliderStyle(juce::Slider::RotaryHorizontalVerticalDrag);
-    outputSlider.setTextBoxStyle(juce::Slider::TextBoxBelow, false, 50, 20);
-    addAndMakeVisible(outputSlider);
+    auto configureLabel = [&](juce::Label& label, const juce::String& text)
+    {
+        label.setText(text, juce::dontSendNotification);
+        label.setJustificationType(juce::Justification::centred);
+        addAndMakeVisible(label);
+    };
 
-    outputLabel.setText("Output", juce::dontSendNotification);
-    outputLabel.setJustificationType(juce::Justification::centred);
-    outputLabel.attachToComponent(&outputSlider, false);
+    // A. Saturation Globale
+    configureSlider(saturationSlider, "Saturation", "drive");
+    configureLabel(saturationLabel, "Saturation");
+    saturationLabel.attachToComponent(&saturationSlider, false);
+    configureSlider(shapeSlider, "Shape", "shape");
+    configureLabel(shapeLabel, "Shape");
+    shapeLabel.attachToComponent(&shapeSlider, false);
+    attachSlider(saturationAttachment, "drive", saturationSlider);
+    attachSlider(shapeAttachment, "shape", shapeSlider);
 
-    // 3. Create Attachments
-    // This links the UI sliders to the parameters ID defined in PluginProcessor.cpp
-    driveAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.apvts, "drive", driveSlider);
+    // B. Bande LOW
+    addAndMakeVisible(lowEnableButton);
+    lowEnableButton.setButtonText("Low Enable");
+    attachButton(lowEnableAttachment, "lowEnable", lowEnableButton);
+    configureSlider(lowFreqSlider, "Low Freq", "lowFreq");
+    configureLabel(lowFreqLabel, "Low Freq");
+    lowFreqLabel.attachToComponent(&lowFreqSlider, false);
+    configureSlider(lowWarmthSlider, "Low Warmth", "lowWarmth");
+    configureLabel(lowWarmthLabel, "Low Warmth");
+    lowWarmthLabel.attachToComponent(&lowWarmthSlider, false);
+    configureSlider(lowLevelSlider, "Low Level", "lowLevel");
+    configureLabel(lowLevelLabel, "Low Level");
+    lowLevelLabel.attachToComponent(&lowLevelSlider, false);
+    attachSlider(lowFreqAttachment, "lowFreq", lowFreqSlider);
+    attachSlider(lowWarmthAttachment, "lowWarmth", lowWarmthSlider);
+    attachSlider(lowLevelAttachment, "lowLevel", lowLevelSlider);
 
-    outputAttachment = std::make_unique<juce::AudioProcessorValueTreeState::SliderAttachment>(
-        audioProcessor.apvts, "output", outputSlider);
+    // C. Bande HIGH
+    addAndMakeVisible(highEnableButton);
+    highEnableButton.setButtonText("High Enable");
+    attachButton(highEnableAttachment, "highEnable", highEnableButton);
+    configureSlider(highFreqSlider, "High Freq", "highFreq");
+    configureLabel(highFreqLabel, "High Freq");
+    highFreqLabel.attachToComponent(&highFreqSlider, false);
+    configureSlider(highSoftnessSlider, "High Softness", "highSoftness");
+    configureLabel(highSoftnessLabel, "High Softness");
+    highSoftnessLabel.attachToComponent(&highSoftnessSlider, false);
+    configureSlider(highLevelSlider, "High Level", "highLevel");
+    configureLabel(highLevelLabel, "High Level");
+    highLevelLabel.attachToComponent(&highLevelSlider, false);
+    attachSlider(highFreqAttachment, "highFreq", highFreqSlider);
+    attachSlider(highSoftnessAttachment, "highSoftness", highSoftnessSlider);
+    attachSlider(highLevelAttachment, "highLevel", highLevelSlider);
 
-    // Set the initial size of the window (Width, Height)
-    setSize (400, 300);
+    // D. Gain & Routing
+    configureSlider(inputGainSlider, "Input", "inputGain");
+    configureLabel(inputGainLabel, "Input");
+    inputGainLabel.attachToComponent(&inputGainSlider, false);
+    configureSlider(mixSlider, "Mix", "mix");
+    configureLabel(mixLabel, "Mix");
+    mixLabel.attachToComponent(&mixSlider, false);
+    configureSlider(outputGainSlider, "Output", "output");
+    configureLabel(outputGainLabel, "Output");
+    outputGainLabel.attachToComponent(&outputGainSlider, false);
+    attachSlider(inputGainAttachment, "inputGain", inputGainSlider);
+    attachSlider(mixAttachment, "mix", mixSlider);
+    attachSlider(outputGainAttachment, "output", outputGainSlider);
+
+    addAndMakeVisible(prePostButton);
+    prePostButton.setButtonText("Pre/Post");
+    attachButton(prePostAttachment, "prePost", prePostButton);
+    addAndMakeVisible(limiterButton);
+    limiterButton.setButtonText("Limiter");
+    attachButton(limiterAttachment, "limiter", limiterButton);
+    addAndMakeVisible(bypassButton);
+    bypassButton.setButtonText("Bypass");
+    attachButton(bypassAttachment, "bypass", bypassButton);
+
+    setSize (800, 600);
 }
 
 Vst_saturatorAudioProcessorEditor::~Vst_saturatorAudioProcessorEditor()
@@ -114,30 +175,54 @@ void Vst_saturatorAudioProcessorEditor::paint (juce::Graphics& g)
 
 void Vst_saturatorAudioProcessorEditor::resized()
 {
-    // This is where we define where components go.
-    // The layout is responsive and adapts to window size.
+    lastScaledWidth = 0; // Force background repaint
 
-    // Reset the cached scaled background so it gets redrawn
-    lastScaledWidth = 0;
-    lastScaledHeight = 0;
+    juce::Rectangle<int> bounds = getLocalBounds().reduced(20);
 
-    // Calculate responsive slider dimensions based on window size
-    int sliderWidth = getWidth() / 4;  // 25% of width
-    int sliderHeight = getHeight() * 2 / 3;  // 67% of height
+    // Header
+    bounds.removeFromTop(40);
 
-    // Ensure minimum sizes for usability
-    sliderWidth = juce::jmax(80, sliderWidth);
-    sliderHeight = juce::jmax(100, sliderHeight);
+    // Footer (for Bypass, etc.)
+    juce::Rectangle<int> footer = bounds.removeFromBottom(40);
+    juce::FlexBox footerBox;
+    footerBox.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
+    footerBox.alignContent = juce::FlexBox::AlignContent::center;
+    footerBox.items.add(juce::FlexItem(bypassButton).withFlex(1));
+    footerBox.items.add(juce::FlexItem(limiterButton).withFlex(1));
+    footerBox.items.add(juce::FlexItem(prePostButton).withFlex(1));
+    footerBox.performLayout(footer);
 
-    // Calculate positions to center them
-    int spacing = juce::jmax(20, getWidth() / 20);
-    int totalWidth = (sliderWidth * 2) + spacing;
-    int startX = (getWidth() - totalWidth) / 2;
-    int startY = (getHeight() - sliderHeight) / 2;
+    // Main Content Area
+    juce::FlexBox mainBox;
+    mainBox.flexDirection = juce::FlexBox::Direction::row;
+    mainBox.justifyContent = juce::FlexBox::JustifyContent::spaceAround;
 
-    driveSlider.setBounds(startX, startY, sliderWidth, sliderHeight);
-    outputSlider.setBounds(startX + sliderWidth + spacing, startY, sliderWidth, sliderHeight);
+    // Create Flex items for each vertical section
+    juce::FlexBox gainInBox, lowBox, highBox, masterBox;
+    gainInBox.flexDirection = juce::FlexBox::Direction::column;
+    lowBox.flexDirection = juce::FlexBox::Direction::column;
+    highBox.flexDirection = juce::FlexBox::Direction::column;
+    masterBox.flexDirection = juce::FlexBox::Direction::column;
 
-    // Trigger a repaint to redraw the background
+    // Helper to add sliders to a vertical box
+    auto addSlidersToBox = [&](juce::FlexBox& box, std::vector<std::reference_wrapper<juce::Component>> components) {
+        for (auto& comp : components)
+            box.items.add(juce::FlexItem(comp.get()).withFlex(1));
+    };
+
+    // Populate boxes
+    addSlidersToBox(gainInBox, {inputGainSlider});
+    addSlidersToBox(lowBox, {lowEnableButton, lowFreqSlider, lowWarmthSlider, lowLevelSlider});
+    addSlidersToBox(highBox, {highEnableButton, highFreqSlider, highSoftnessSlider, highLevelSlider});
+    addSlidersToBox(masterBox, {saturationSlider, shapeSlider, mixSlider, outputGainSlider});
+
+    // Add vertical boxes to the main horizontal box
+    mainBox.items.add(juce::FlexItem(gainInBox).withFlex(1));
+    mainBox.items.add(juce::FlexItem(lowBox).withFlex(1));
+    mainBox.items.add(juce::FlexItem(highBox).withFlex(1));
+    mainBox.items.add(juce::FlexItem(masterBox).withFlex(1));
+
+    mainBox.performLayout(bounds);
+
     repaint();
 }

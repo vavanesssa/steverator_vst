@@ -26,7 +26,9 @@ Vst_saturatorAudioProcessor::Vst_saturatorAudioProcessor()
                      #endif
                        ),
        // Initialize APVTS with specific parameters
-       apvts(*this, nullptr, "Parameters", createParameterLayout())
+       apvts(*this, nullptr, "Parameters", createParameterLayout()),
+       // Initialize Oversampling with 2 channels, 4x factor, and high-quality filter
+       oversampling(2, 2, juce::dsp::Oversampling<float>::FilterType::filterHalfBandPolyphaseIIR)
 #endif
 {
 }
@@ -42,33 +44,57 @@ juce::AudioProcessorValueTreeState::ParameterLayout Vst_saturatorAudioProcessor:
 {
     juce::AudioProcessorValueTreeState::ParameterLayout layout;
 
-    // Phase 2: Adding Parameters
-    // -------------------------------------------------------------------------
-    // "Drive" Parameter
-    // - ID: "drive" (used in code)
-    // - Name: "Drive" (visible in DAW)
-    // - Range: 0.0 to 24.0 dB
-    // - Default: 0.0 dB
+    // A. Saturation Globale
+    // Note: ID "drive" is kept for preset compatibility, name is changed to "Saturation"
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "drive",       // Parameter ID
-        "Drive",       // Parameter Name
+        "Saturation",  // Parameter Name
         0.0f,          // Min Value
         24.0f,         // Max Value
         0.0f           // Default Value
     ));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "shape", "Shape", 0.0f, 1.0f, 0.0f));
 
-    // "Output" Parameter
-    // - ID: "output"
-    // - Name: "Output"
-    // - Range: -24.0 to 24.0 dB
-    // - Default: 0.0 dB
+    // B. Bande LOW (graves)
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "lowEnable", "Low Enable", false));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "lowFreq", "Low Freq", juce::NormalisableRange<float>(20.0f, 1000.0f, 1.0f, 0.3f), 200.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "lowWarmth", "Low Warmth", 0.0f, 1.0f, 0.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "lowLevel", "Low Level", -24.0f, 24.0f, 0.0f));
+
+    // C. Bande HIGH (aigus)
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "highEnable", "High Enable", false));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "highFreq", "High Freq", juce::NormalisableRange<float>(1000.0f, 20000.0f, 1.0f, 0.3f), 5000.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "highSoftness", "High Softness", 0.0f, 1.0f, 0.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "highLevel", "High Level", -24.0f, 24.0f, 0.0f));
+
+    // D. Gain & routing
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "inputGain", "Input Gain", -24.0f, 24.0f, 0.0f));
+    layout.add(std::make_unique<juce::AudioParameterFloat>(
+        "mix", "Mix", 0.0f, 100.0f, 100.0f));
+    // Note: ID "output" is kept for preset compatibility, name is changed to "Output Gain"
     layout.add(std::make_unique<juce::AudioParameterFloat>(
         "output",      // Parameter ID
-        "Output",      // Parameter Name
+        "Output Gain", // Parameter Name
         -24.0f,        // Min Value
         24.0f,         // Max Value
         0.0f           // Default Value
     ));
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "prePost", "Pre/Post", false));
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "limiter", "Limiter", true));
+    layout.add(std::make_unique<juce::AudioParameterBool>(
+        "bypass", "Bypass", false));
 
     return layout;
 }
@@ -140,12 +166,35 @@ void Vst_saturatorAudioProcessor::changeProgramName (int index, const juce::Stri
 // Initialize DSP here
 void Vst_saturatorAudioProcessor::prepareToPlay (double sampleRate, int samplesPerBlock)
 {
-    // This method is called before audio starts flowing.
-    // It's the place to set up DSP objects (like filters, delay lines) that need
-    // to know the Sample Rate or Block Size.
+    // 1. Prepare DSP Spec
+    juce::dsp::ProcessSpec spec { sampleRate, (juce::uint32) samplesPerBlock, (juce::uint32) getTotalNumOutputChannels() };
+    lastSampleRate = sampleRate;
 
-    // For simple gain/tanh, we don't strictly need initialization,
-    // but it's good practice to reset state here.
+    // 2. Initialize and Reset Crossover Filters
+    lp1.prepare(spec); hp1.prepare(spec);
+    lp2.prepare(spec); hp2.prepare(spec);
+    lp1.reset(); hp1.reset();
+    lp2.reset(); hp2.reset();
+
+    // 3. Initialize and Reset Limiter
+    limiter.prepare(spec);
+    limiter.reset();
+
+    // 4. Prepare DC Blocker
+    dcBlocker.prepare(spec);
+    dcBlocker.reset();
+
+    // 5. Resize internal buffers
+    lowBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
+    midBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
+    highBuffer.setSize(spec.numChannels, spec.maximumBlockSize);
+
+    // 6. Prepare Oversampling
+    oversampling.initProcessing(spec.maximumBlockSize);
+
+    // 7. Force filter coefficient update
+    lastLowFreq = 0.0f;
+    lastHighFreq = 0.0f;
 }
 
 void Vst_saturatorAudioProcessor::releaseResources()
@@ -169,61 +218,194 @@ bool Vst_saturatorAudioProcessor::isBusesLayoutSupported (const BusesLayout& lay
 }
 
 //==============================================================================
-// 2. Audio Processing
-// This is the REAL-TIME audio thread.
-// CRITICAL:
-// - NO memory allocation (no `new`, `malloc`, `std::vector` resizing).
-// - NO blocking operations (no `std::mutex`, file I/O, `printf`).
 void Vst_saturatorAudioProcessor::processBlock (juce::AudioBuffer<float>& buffer, juce::MidiBuffer& midiMessages)
 {
     juce::ScopedNoDenormals noDenormals;
     auto totalNumInputChannels  = getTotalNumInputChannels();
     auto totalNumOutputChannels = getTotalNumOutputChannels();
 
-    // Clear any output channels that don't contain input data.
-    // (e.g., if we have 2 inputs but 4 outputs, silence the last 2).
     for (auto i = totalNumInputChannels; i < totalNumOutputChannels; ++i)
         buffer.clear (i, 0, buffer.getNumSamples());
 
-    // Phase 2: Retrieve Parameter Values
-    // We get the atomic float value from APVTS. This is thread-safe.
-    // We convert dB to linear gain: 10^(dB/20)
-    float drivedB = *apvts.getRawParameterValue("drive");
-    float outputdB = *apvts.getRawParameterValue("output");
+    // 1. Get Parameter Values
+    // Global
+    bool bypass = *apvts.getRawParameterValue("bypass");
+    if (bypass) return;
 
-    float driveGain = juce::Decibels::decibelsToGain(drivedB);
-    float outputGain = juce::Decibels::decibelsToGain(outputdB);
+    float saturation = *apvts.getRawParameterValue("drive");
+    float shape = *apvts.getRawParameterValue("shape");
 
-    // Loop through each channel (Left, Right)
-    for (int channel = 0; channel < totalNumInputChannels; ++channel)
+    // Low Band
+    bool lowEnable = *apvts.getRawParameterValue("lowEnable");
+    float lowFreq = *apvts.getRawParameterValue("lowFreq");
+    float lowWarmth = *apvts.getRawParameterValue("lowWarmth");
+    float lowLevel = juce::Decibels::decibelsToGain(*apvts.getRawParameterValue("lowLevel"));
+
+    // High Band
+    bool highEnable = *apvts.getRawParameterValue("highEnable");
+    float highFreq = *apvts.getRawParameterValue("highFreq");
+    float highSoftness = *apvts.getRawParameterValue("highSoftness");
+    float highLevel = juce::Decibels::decibelsToGain(*apvts.getRawParameterValue("highLevel"));
+
+    // Gain & Routing
+    float inputGain = juce::Decibels::decibelsToGain(*apvts.getRawParameterValue("inputGain"));
+    float mix = *apvts.getRawParameterValue("mix") / 100.0f;
+    float outputGain = juce::Decibels::decibelsToGain(*apvts.getRawParameterValue("output"));
+    bool prePost = *apvts.getRawParameterValue("prePost");
+    bool limiterEnable = *apvts.getRawParameterValue("limiter");
+
+
+    // 2. Gain Staging
+    // Store a clean copy of the input signal for the Dry/Wet mix.
+    juce::AudioBuffer<float> dryBuffer;
+    dryBuffer.makeCopyOf(buffer);
+
+    // Apply Input Gain
+    buffer.applyGain(inputGain);
+
+
+    // 3. Update Filter Coefficients (if needed)
+    if (lowFreq != lastLowFreq || getSampleRate() != lastSampleRate)
     {
-        // Get a pointer to the start of the array of samples for this channel
-        auto* channelData = buffer.getWritePointer (channel);
-        auto numSamples = buffer.getNumSamples();
+        lp1.setCutoffFrequency(lowFreq);
+        hp1.setCutoffFrequency(lowFreq);
+        lastLowFreq = lowFreq;
+    }
+    if (highFreq != lastHighFreq || getSampleRate() != lastSampleRate)
+    {
+        lp2.setCutoffFrequency(highFreq);
+        hp2.setCutoffFrequency(highFreq);
+        lastHighFreq = highFreq;
+    }
 
-        // Loop through every sample in the buffer
-        for (int sample = 0; sample < numSamples; ++sample)
+    // 4. Pre/Post Processing Logic
+    auto processSaturation = [&](juce::AudioBuffer<float>& audio)
+    {
+        // This lambda encapsulates the saturation logic
+        float drive = juce::Decibels::decibelsToGain(saturation);
+
+        for (int channel = 0; channel < audio.getNumChannels(); ++channel)
         {
-            float inputSignal = channelData[sample];
-
-            // -----------------------------------------------------------------
-            // Phase 3: Saturation Logic
-            // -----------------------------------------------------------------
-
-            // 1. Apply Input Drive
-            float drivenSignal = inputSignal * driveGain;
-
-            // 2. Apply Saturation (Phase 3)
-            // tanh() creates a soft-clipping effect.
-            // As drivenSignal gets larger, tanh approaches +/- 1.0.
-            float processedSignal = std::tanh(drivenSignal);
-
-            // 3. Apply Output Gain
-            float outputSignal = processedSignal * outputGain;
-
-            // 4. Write back to buffer
-            channelData[sample] = outputSignal;
+            auto* channelData = audio.getWritePointer(channel);
+            for (int sample = 0; sample < audio.getNumSamples(); ++sample)
+            {
+                float x = channelData[sample] * drive;
+                // Tape-like saturation using a formula that models soft-clipping
+                // The 'shape' parameter blends between tanh and a more aggressive curve
+                float soft = std::tanh(x * (1.0f - shape * 0.5f));
+                float hard = (x - x*x*x/3.0f); // 3rd order polynomial
+                channelData[sample] = soft * (1.0f - shape) + hard * shape;
+            }
         }
+    };
+
+    auto processBands = [&](juce::AudioBuffer<float>& audio)
+    {
+        // --- Standard 3-Band Linkwitz-Riley Crossover ---
+
+        // 1. Create clean copies of the input signal for each filter chain.
+        lowBuffer.makeCopyOf(audio);
+        midBuffer.makeCopyOf(audio);
+        highBuffer.makeCopyOf(audio);
+
+        // 2. Create the LOW band signal.
+        juce::dsp::AudioBlock<float> lowBlock(lowBuffer);
+        lp1.process(juce::dsp::ProcessContextReplacing<float>(lowBlock)); // Low-pass at lowFreq
+
+        // 3. Create the HIGH band signal.
+        juce::dsp::AudioBlock<float> highBlock(highBuffer);
+        hp2.process(juce::dsp::ProcessContextReplacing<float>(highBlock)); // High-pass at highFreq
+
+        // 4. Create the MID band signal.
+        juce::dsp::AudioBlock<float> midBlock(midBuffer);
+        hp1.process(juce::dsp::ProcessContextReplacing<float>(midBlock)); // High-pass at lowFreq
+        lp2.process(juce::dsp::ProcessContextReplacing<float>(midBlock)); // Low-pass at highFreq
+
+        // --- Per-Band Processing (In-Place) ---
+        // If a band is enabled, its corresponding buffer is processed directly.
+        // If not, the buffer contains the original, unprocessed audio for that band.
+        if (lowEnable)
+        {
+            for (int channel = 0; channel < lowBuffer.getNumChannels(); ++channel) {
+                auto* data = lowBuffer.getWritePointer(channel);
+                for (int i = 0; i < lowBuffer.getNumSamples(); ++i) {
+                    float x = data[i];
+                    data[i] = x + (x * std::abs(x)) * lowWarmth;
+                }
+            }
+            dcBlocker.process(juce::dsp::ProcessContextReplacing<float>(lowBlock));
+            lowBuffer.applyGain(lowLevel);
+        }
+
+        if (highEnable)
+        {
+            for (int channel = 0; channel < highBuffer.getNumChannels(); ++channel) {
+                auto* data = highBuffer.getWritePointer(channel);
+                for (int i = 0; i < highBuffer.getNumSamples(); ++i) {
+                    float x = data[i];
+                    data[i] = x - std::tanh(x * highSoftness);
+                }
+            }
+            highBuffer.applyGain(highLevel);
+        }
+
+        // --- Recombine Bands (No Copies Needed) ---
+        // All member buffers are now in their final state (either processed or unprocessed).
+        // We can now safely sum them into the main output buffer.
+        audio.clear();
+        for (int channel = 0; channel < audio.getNumChannels(); ++channel)
+        {
+            audio.addFrom(channel, 0, lowBuffer, channel, 0, audio.getNumSamples());
+            audio.addFrom(channel, 0, midBuffer, channel, 0, audio.getNumSamples());
+            audio.addFrom(channel, 0, highBuffer, channel, 0, audio.getNumSamples());
+        }
+    };
+
+    if (prePost) // Post: EQ -> Saturation
+    {
+        // 1. Process bands first
+        processBands(buffer);
+
+        // 2. Then apply oversampled saturation
+        juce::dsp::AudioBlock<float> block(buffer);
+        juce::dsp::AudioBlock<float> oversampledBlock = oversampling.processSamplesUp(block);
+        processSaturation(oversampledBlock.getAudioBuffer());
+        oversampling.processSamplesDown(block);
+    }
+    else // Pre: Saturation -> EQ
+    {
+        // 1. Apply oversampled saturation first
+        juce::dsp::AudioBlock<float> block(buffer);
+        juce::dsp::AudioBlock<float> oversampledBlock = oversampling.processSamplesUp(block);
+        processSaturation(oversampledBlock.getAudioBuffer());
+        oversampling.processSamplesDown(block);
+
+        // 2. Then process bands
+        processBands(buffer);
+    }
+
+    // 5. Final Stage: Mix, Output Gain, Limiter
+    for (int channel = 0; channel < totalNumOutputChannels; ++channel)
+    {
+        auto* channelData = buffer.getWritePointer(channel);
+        auto* dryData = dryBuffer.getReadPointer(channel);
+
+        for (int sample = 0; sample < buffer.getNumSamples(); ++sample)
+        {
+            // Dry/Wet Mix
+            float wetSignal = channelData[sample];
+            float drySignal = dryData[sample];
+            channelData[sample] = drySignal * (1.0f - mix) + wetSignal * mix;
+        }
+    }
+
+    // Apply Output Gain before Limiter
+    buffer.applyGain(outputGain);
+
+    if (limiterEnable)
+    {
+        juce::dsp::AudioBlock<float> block(buffer);
+        limiter.process(juce::dsp::ProcessContextReplacing<float>(block));
     }
 }
 
