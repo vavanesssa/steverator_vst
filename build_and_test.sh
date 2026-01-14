@@ -27,9 +27,9 @@ STANDALONE_APP="build/steverator_artefacts/Release/Standalone/Steverator.app"
 
 # Copy version.txt and PNG images to both VST3 and Standalone Resources
 cp Assets/version.txt "build/steverator_artefacts/Release/Standalone/Steverator.app/Contents/Resources/" 2>/dev/null || true
-cp Assets/*.png "build/steverator_artefacts/Release/Standalone/Steverator.app/Contents/Resources/" 2>/dev/null || true
+cp Assets/*.png *.ttf "build/steverator_artefacts/Release/Standalone/Steverator.app/Contents/Resources/" 2>/dev/null || true
 cp Assets/version.txt "build/steverator_artefacts/Release/VST3/steverator.vst3/Contents/Resources/" 2>/dev/null || true
-cp Assets/*.png "build/steverator_artefacts/Release/VST3/steverator.vst3/Contents/Resources/" 2>/dev/null || true
+cp Assets/*.png *.ttf "build/steverator_artefacts/Release/VST3/steverator.vst3/Contents/Resources/" 2>/dev/null || true
 
 echo "✓ version.txt and PNG images copied to Resources"
 echo ""

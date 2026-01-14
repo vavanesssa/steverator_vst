@@ -312,8 +312,9 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   signatureLink.setURL(juce::URL("https://soundcloud.com/neixxatek"));
   signatureLink.setColour(juce::HyperlinkButton::textColourId,
                           juce::Colour::fromFloatRGBA(0.5f, 0.3f, 0.1f, 1.0f));
-  signatureLink.setFont(juce::Font(18.0f, juce::Font::bold), false,
-                        juce::Justification::bottomRight);
+  signatureLink.setFont(
+      customLookAndFeel.getCustomFont(24.0f, juce::Font::bold), false,
+      juce::Justification::bottomRight);
   addAndMakeVisible(signatureLink);
 }
 
@@ -370,6 +371,17 @@ void Vst_saturatorAudioProcessorEditor::paint(juce::Graphics &g) {
   float currentLevel =
       audioProcessor.currentRMSLevel.load(std::memory_order_relaxed);
   bool isTalking = currentLevel > 0.005f;
+
+  // === TOP BAR LABELS ===
+  g.setColour(
+      juce::Colour::fromFloatRGBA(0.5f, 0.3f, 0.1f, 1.0f)); // Dark Brown
+  g.setFont(customLookAndFeel.getCustomFont(22.0f, juce::Font::bold));
+
+  // Presets is above the preset combo (x=480, y=45) - Label at y=20
+  g.drawText("PRESETS", 480, 20, 200, 25, juce::Justification::centred, true);
+
+  // Wave is above wave combo (x=900, y=45) - Label at y=20
+  g.drawText("WAVE", 900, 20, 200, 25, juce::Justification::centred, true);
 
   juce::Image *imgToDraw = &steveImage;
 

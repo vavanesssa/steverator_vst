@@ -1,52 +1,115 @@
-# 🎛️ PRD — steverator "Le Poisson Steve"
+# 🎛️ Steverator — "Le Saturateur à Poisson"
 
-(VST Saturator, Living Document)
+![C++](https://img.shields.io/badge/C++-17-blue?style=for-the-badge&logo=c%2B%2B)
+![JUCE](https://img.shields.io/badge/JUCE-Framework-8da033?style=for-the-badge&logo=juce)
+![Platform](https://img.shields.io/badge/Platform-macOS%20%7C%20Windows-lightgrey?style=for-the-badge&logo=apple)
+![VST3](https://img.shields.io/badge/Format-VST3-orange?style=for-the-badge)
+![Steve](https://img.shields.io/badge/Mascot-Steve_The_Fish-blueviolet?style=for-the-badge)
 
----
-
-## 🎯 Project Vision & Intention
-
-The `steverator` project is a VST3 audio plugin built with JUCE, demonstrating audio processing, UI design, and plugin architecture.
-Themed around "Le Poisson Steve" (Steve the Fish), this plugin showcases:
-*   How a VST functions within a DAW (e.g., Ableton).
-*   How sound is processed in real-time with multi-band processing.
-*   How the UI is connected to the audio engine via JUCE's parameter system.
-*   How to structure an audio project cleanly.
-*   How to iterate and refine without breaking existing functionality.
-
-The project remains readable and modifiable at every stage.
+Bienvenue sur la documentation officielle du **Steverator**, un plugin de saturation audio unique en son genre, accompagné de Steve le poisson.
 
 ---
 
-## 🧠 Development Philosophy
+# 🇫🇷 MANUEL UTILISATEUR
 
-This project is conceived as a long-term project, not a sprint.
+### Introduction
+Le Steverator est un processeur de saturation multi-bandes conçu pour apporter chaleur, caractère et grain à vos pistes audio. Que ce soit pour réchauffer une basse, donner du mordant à une voix ou salir une batterie, Steve est là pour vous aider.
 
-**Key Principles:**
-*   Code must be understandable before being performant.
-*   Every file must explain its role.
-*   Every important function must be commented.
-*   Key variables must be easily tweakable.
-*   The project must encourage experimentation (UI, parameters, DSP).
+### Interface & Réglages
 
-**This PRD is a living document:**
-👉 It must be updated as implementation progresses, including:
-*   What has been done.
-*   What remains to be done.
-*   Technical decisions made.
-*   Problems encountered and their solutions.
+L'interface est divisée en plusieurs sections intuitives :
+
+#### 1. Entrée & Steve (Gauche)
+*   **Input (Entrée)** : Contrôle le niveau du signal entrant dans le plugin (-24dB à +24dB). Utilisez-le pour attaquer les étages de saturation plus ou moins fort.
+*   **Steve** : Notre mascotte réagit à la musique ! Il vous accompagne visuellement pendant le traitement. 
+*   **Presets** : Une sélection de préréglages pour démarrer rapidement.
+
+#### 2. Bandes de Fréquences (Centre)
+Le Steverator divise le son en trois parties (Basses, Médiums, Hautes) pour un traitement précis :
+
+*   **Low Freq & High Freq** : Ces knobs définissent les points de coupure (crossover).
+    *   Tout ce qui est en dessous de *Low Freq* est traité par la bande **BASSE**.
+    *   Tout ce qui est au-dessus de *High Freq* est traité par la bande **HAUTE**.
+    *   Entre les deux se trouve la bande **MÉDIUM**.
+
+*   **Low Warmth (Chaleur des Basses)** : Ajoute une saturation spécifique et ronde aux basses fréquences.
+*   **High Softness (Douceur des Aigus)** : Une saturation plus douce pour éviter l'agressivité dans les aigus.
+*   **Level (Low/High)** : Ajustez le volume de sortie de chaque bande pour rééquilibrer le spectre.
+
+#### 3. Saturation Globale (Droite)
+Le cœur du traitement :
+
+*   **Wave (Waveshape)** : Choisissez le "type" de distorsion parmi une vaste collection (Tube, Tape, Diode, Fold, etc.). Chaque forme d'onde a sa propre couleur.
+*   **Saturation** : Le gros bouton ! Il contrôle l'intensité générale de l'effet (Drive).
+*   **Shape** : Modifie la texture de la distorsion. Tournez-le pour sculpter le caractère du son (plus tranchant ou plus rond).
+
+#### 4. Section Master (Droite & Bas)
+*   **Mix** : Mélange le son traité (Wet) avec le son d'origine (Dry). Parfait pour de la compression/saturation parallèle.
+*   **Output (Sortie)** : Niveau de sortie final.
+*   **Delta Monitor** : Un outil puissant qui vous permet d'écouter **uniquement** ce que le plugin ajoute (la distorsion). Très utile pour régler finement l'effet sans être distrait par le son original.
+*   **Delta Gain** : Ajuste le volume de ce signal "Delta" pour le rendre plus audible ou éviter qu'il ne sature.
+*   **Limiter** : Un limiteur de sécurité en fin de chaîne pour éviter les pics numériques désagréables.
 
 ---
 
-## 🤖 Technical Guide & Architecture (AI Context)
-*This section is designed to quickly orient AI on the project's structure.*
+# 🇬🇧 USER MANUAL
+
+### Introduction
+Steverator is a unique multi-band saturation plugin featuring Steve the Fish. It is designed to add warmth, character, and grit to your audio tracks. Whether you need to fatten up a bass, add bite to vocals, or dirt up drums, Steve is here to serve.
+
+### Interface & Controls
+
+The interface is divided into intuitive sections:
+
+#### 1. Input & Steve (Left)
+*   **Input**: Controls the incoming signal level (-24dB to +24dB). Use this to drive the saturation stages harder or softer.
+*   **Steve**: Our mascot reacts to the music! He provides visual company during your mixing sessions.
+*   **Presets**: A selection of factory presets to get you started quickly.
+
+#### 2. Frequency Bands (Center)
+Steverator splits the audio into three parts (Low, Mid, High) for precise processing:
+
+*   **Low Freq & High Freq**: These knobs define the crossover points.
+    *   Everything below *Low Freq* is treated by the **LOW** band.
+    *   Everything above *High Freq* is treated by the **HIGH** band.
+    *   In between lies the **MID** band.
+
+*   **Low Warmth**: Adds specific, round saturation to low frequencies.
+*   **High Softness**: Applies smoother saturation to highs to prevent harshness.
+*   **Level (Low/High)**: Adjust the output volume of each band to rebalance the spectrum.
+
+#### 3. Global Saturation (Right)
+The core of the effect:
+
+*   **Wave (Waveshape)**: Choose the "type" of distortion from a vast collection (Tube, Tape, Diode, Fold, etc.). Each algorithm has its own flavor.
+*   **Saturation**: The big knob! Controls the overall intensity of the effect (Drive).
+*   **Shape**: Modifies the texture of the distortion. Tweak this to sculpt the character of the sound (sharper or rounder).
+
+#### 4. Master Section (Right & Bottom)
+*   **Mix**: Blends the processed (Wet) sound with the original (Dry) sound. Perfect for parallel saturation.
+*   **Output**: Final output level.
+*   **Delta Monitor**: A powerful tool allowing you to listen **only** to what the plugin is adding (the distortion). Very useful for fine-tuning without being distracted by the dry signal.
+*   **Delta Gain**: Adjusts the volume of this "Delta" signal.
+*   **Limiter**: A safety limiter at the end of the chain to prevent nasty digital clipping.
+
+---
+
+# 🛠️ DEVELOPER DOCUMENTATION
+
+*(AI Context & Technical Architectures)*
+
+## 🎯 Project Vision
+The `steverator` project is a VST3 audio plugin built with JUCE.
+Themed around "Le Poisson Steve" (Steve the Fish), this plugin showcases how to structure a modern audio project cleanly using industry-standard practices.
+
+## 🤖 Technical Guide & Architecture
 
 ### 🏗 Global Architecture (Model-View-Controller)
 The project uses **JUCE** and strictly separates audio processing from the graphical interface:
 
 *   **MODEL (State)**: `AudioProcessorValueTreeState (apvts)`
     *   Located in `PluginProcessor`.
-    *   Single source of truth for all parameters (Drive, Mix, Freqs...).
+    *   Single source of truth for all parameters.
     *   Handles preset saving/loading (`getStateInformation`).
 
 *   **CONTROLLER (DSP & Logic)**: `PluginProcessor`
@@ -57,7 +120,7 @@ The project uses **JUCE** and strictly separates audio processing from the graph
 *   **VIEW (Interface)**: `PluginEditor`
     *   **File**: `Source/PluginEditor.cpp`
     *   **Role**: Receives a reference to `PluginProcessor` to link Sliders to Parameters via `Attachments`.
-    *   **Rendering**: Uses `CustomLookAndFeel` for vector drawing (no PNGs for knobs).
+    *   **Rendering**: Uses `CustomLookAndFeel` for vector drawing (procedural knobs, custom fonts).
 
 ### 📍 Critical Entry Points
 
@@ -72,190 +135,35 @@ The project uses **JUCE** and strictly separates audio processing from the graph
 ### ⚠️ Golden Rules
 1.  **Real-Time**: In `processBlock`, **FORBIDDEN** to use `new`, `malloc`, `std::vector::push_back`, or blocking functions.
 2.  **State Management**: Never store UI state separate from APVTS if it affects the sound.
-3.  **Assets**: Images (e.g., mascot) are in `Assets/` and loaded in `PluginEditor`.
+3.  **Assets**: Images (e.g., mascot) and Fonts are in `Assets/` and loaded in `PluginEditor`/`CustomLookAndFeel`.
 
----
-
-## 📦 Functional Description
+## 📦 Functional Scale (DSP)
 
 `steverator` is a 3-band audio saturation effect with multi-frequency processing.
 
-### Main Function
+**Main Function:**
+Apply soft saturation and wave-shaping to the incoming audio signal with independent control of low, mid, and high frequencies.
 
-Apply soft saturation to the incoming audio signal with independent control of low, mid, and high frequencies to add warmth, density, and controlled harmonic distortion.
-
-### Complete Parameter List (Current)
-
-**Global Controls:**
-*   **Waveshape**: Saturation algorithm selector (18 different waveshaping curves)
-    - Tube, SoftClip, HardClip, Diode 1, Diode 2, Linear Fold, Sin Fold, Zero-Square
-    - Downsample, Asym, Rectify, X-Shaper, X-Shaper (Asym), Sine Shaper, Stomp Box
-    - Tape Sat., Overdrive, Soft Sat.
-*   **Drive**: Pre-saturation gain (0 - 24 dB, controls overall saturation intensity)
-*   **Shape**: Saturation curve modulation (0 - 1, modulates each waveshape differently)
-*   **Input Gain**: Pre-processing gain (-24 to +24 dB)
-*   **Mix**: Wet/dry blend (0 - 100%)
-*   **Output Gain**: Post-processing gain (-24 to +24 dB)
-
-**LOW Band (100 Hz - 1 kHz):**
-*   **LOW Enable**: Toggle low-frequency band processing
-*   **Low Freq**: Crossover frequency for low band (20 - 500 Hz)
-*   **Low Warmth**: Saturation intensity for lows (0 - 1)
-*   **Low Level**: Output level for low band (0 - 12 dB)
-
-**HIGH Band (1 kHz - 20 kHz):**
-*   **HIGH Enable**: Toggle high-frequency band processing
-*   **High Freq**: Crossover frequency for high band (500 Hz - 16 kHz)
-*   **High Softness**: Saturation softness for highs (0 - 1)
-*   **High Level**: Output level for high band (0 - 12 dB)
-
-**Routing & Effects:**
-*   **Pre/Post**: Route saturation before/after EQ bands
-*   **Limiter**: Soft limiter on output
-*   **Bypass**: Full effect bypass
-
-**Delta Monitor (Harmonics Isolation):**
-*   **DELTA**: Toggle delta monitoring mode - outputs **only the harmonics** added by saturation (wet - dry)
-    - Useful for precisely tuning saturation settings by hearing only the distortion
-    - Ignores Mix parameter when active (uses 100% wet for calculation)
-    - Includes ~10ms crossfade for click-free transitions
-*   **Δ Gain (Delta Gain)**: Pre-limiter gain for delta signal (-24 to 0 dB, default: -12 dB)
-    - Safety feature to prevent loud output (harmonics can be very loud)
-    - Uses tanh soft clipper for additional protection
-
-All parameters are:
-*   Automatable in the DAW.
-*   Visible and editable via the UI.
-*   Clearly documented in the code.
-*   Connected via JUCE's AudioProcessorValueTreeState (APVTS).
-
----
-
-## 🧱 Target Tech Stack
-
+**Tech Stack:**
 *   **Language**: C++
 *   **Framework**: JUCE
 *   **Plugin Format**: VST3
-*   **Platforms**:
-    *   macOS Apple Silicon + Intel (Universal Binary)
-    *   Windows x64
+*   **Platforms**: macOS (Universal), Windows x64
 
----
-
-## 💻 Development Environment
-
-The development is targeted for macOS (M3 Pro) compatibility, but the code is cross-platform.
-
-The project structure must allow for:
-*   Windows builds.
-*   Future AU extension (optional).
-*   DSP evolutions without a complete rewrite.
-
----
-
-## 🎨 UI Design — "Le Poisson Steve"
-
-The interface features a warm, inviting design inspired by the "Steve the Fish" theme:
-
-**Current Design (January 2026):**
-*   **Background**: Warm beige (RGB 0.93, 0.90, 0.82) reminiscent of vintage amplifier aesthetics
-*   **Theme Image**: "Steve the Fish" mascot displayed on the left side (220px wide)
-*   **Title**: "LE POISSON STEVE" in bold brown-orange (RGB 0.6, 0.35, 0.1)
-*   **Knob Design**: All-procedural knobs drawn in C++ with:
-    - Concentric circle design with golden-to-orange gradient arcs
-    - Center value display (numeric, bold, dark brown text)
-    - Smooth rotation indicator dot
-    - No image dependencies
-*   **Buttons**: Toggle buttons for LOW/HIGH with visual state feedback:
-    - Active state: Bright orange glow with border
-    - Inactive state: Subtle brown outline
-    - Large, readable text (16pt bold)
-*   **Color Palette**: Warm earth tones (beige, golden, orange, brown) for consistent aesthetic
-*   **Typography**: Large, readable text throughout (14pt-32pt depending on element)
-*   **Spacing**: Generous spacing (30px margins, 20px+ between elements) to avoid crowding
-
-**Key UI Features:**
-*   **Window Size**: 1100x700 pixels for comfortable viewing and interaction
-*   **Left Panel**: Steve image + input gain control
-*   **Center-Left**: LOW band controls (enable button, 3 parameters)
-*   **Center-Right**: HIGH band controls (enable button, 3 parameters)
-*   **Right Panel**: Master controls (drive, shape, mix, output)
-*   **Footer**: Bypass, Limiter, Pre/Post buttons + version hash display
-*   **Responsive Layout**: FlexBox-based layout that scales with window size
-
-**Design Philosophy:**
-- All UI elements are drawn procedurally (no PNG assets for UI elements)
-- Colors are defined in code for easy tweaking
-- Values are displayed directly on knobs for clarity
-- Buttons show clear active/inactive states with color changes
-
----
-
-## 🔊 DSP — Fundamental Rules
-
-Audio processing must strictly respect real-time rules:
-*   **No memory allocation** in the audio callback.
-*   **No logging** in the audio thread.
-*   **No mutex / locks**.
-*   Processing must be clear, readable, and commented.
-
-The saturation used initially is intentionally simple (e.g., `tanh`) to focus on understanding rather than sophistication.
-
----
-
-## 🚀 Roadmap & Future Features
-
-### 📚 User Documentation System
-*   [ ] Implement a **User Manual Modal** accessible via a "?" button in the top-left corner.
-*   [ ] Content: Explanation of all parameters (Drive, Waveshapes, Bands).
-*   [ ] **Bilingual Support**: Toggle between **English** and **French**.
-*   [ ] Implementation:
-    *   New `DocumentationComponent` overlay.
-    *   JSON or string-based localization system.
-
----
-## 📁 File Architecture & Key Functions
+## 📁 File Architecture
 
 ```plaintext
 steverator/
 ├── CMakeLists.txt              # 🛠 Build configuration (JUCE VST3 settings)
-├── build_and_deploy.sh         # 🚀 MASTER SCRIPT: Builds, signs, deploys, and launches standalone
+├── build_and_deploy.sh         # 🚀 MASTER SCRIPT: Builds, signs, and launches standalone
 ├── Source/
-│   ├── PluginProcessor.h       # 📋 Header: Processor declaration
-│   ├── PluginProcessor.cpp     # 🧠 BRAIN (Controller & DSP):
-│   │   ├── createParameterLayout() # 🎚 Defines all 13 parameters (IDs, Ranges, Names)
-│   │   ├── prepareToPlay()         # ⚙️ Init: Sample rate, buffer size setup
-│   │   ├── processBlock()          # ⚡️ DSP LOOP: Real-time audio processing (CRITICAL: No allocs!)
-│   │   │   └── [Saturator Logic]   #     -> 3-Band Split -> Saturation -> Mix -> Limiter
-│   │   └── getStateInformation()   # 💾 Persistence: Saves/Loads parameters for presets
-│   │
-│   ├── PluginEditor.h          # 📋 Header: Editor declaration
-│   ├── PluginEditor.cpp        # 🎨 FACE (View & UI):
-│   │   ├── PluginEditor()          # 🏗 Constructor: Loads assets, inits attachments
-│   │   ├── paint()                 # 🖌 Background drawing (Steve image, Titles)
-│   │   └── resized()               # 📐 LAYOUT: FlexBox positioning (Responsive calculations)
-│   │
-│   ├── CustomLookAndFeel.h     # 📋 Header: Custom styling
-│   └── CustomLookAndFeel.cpp   # 💅 STYLE (vector graphics):
-│       ├── drawRotarySlider()      # 🎛 Procedural Knob: Golden/Orange gradients, value text
-│       └── drawToggleButton()      # 🔘 Custom Buttons: Active/Inactive states with glow
+│   ├── PluginProcessor.h/cpp   # 🧠 BRAIN (Controller & DSP) relative to AudioProcessor
+│   ├── PluginEditor.h/cpp      # 🎨 FACE (View & UI) relative to AudioProcessorEditor
+│   ├── CustomLookAndFeel.h/cpp # 💅 STYLE (vector graphics, fonts, colors)
 │
 └── Assets/
-    └── steve.png               # 🐟 Mascot: "Steve the Fish" image (loaded in Editor)
+    ├── steve.png               # 🐟 Mascot image
+    ├── indicator.png           # 🟠 Knob position indicator
+    └── NanumPenScript-Regular.ttf # 📝 Custom Handwriting Font
 ```
 
-
-
-
-## 📝 Code Documentation Standards
-
-All code is documented with:
-*   Comprehensive comments explaining the "why" not just the "what"
-*   Clear function signatures with parameter documentation
-*   Inline comments for non-obvious logic
-*   Real-time safety annotations for audio callbacks
-
-Each source file includes:
-*   A header comment block explaining its role
-*   High-level descriptions of major functions
-*   References to related files for context

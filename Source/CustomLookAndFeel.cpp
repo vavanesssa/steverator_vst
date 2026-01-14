@@ -45,6 +45,52 @@ void CustomLookAndFeel::ensureImageLoaded() {
   }
 }
 
+void CustomLookAndFeel::ensureFontLoaded() {
+  if (customTypeface == nullptr) {
+    juce::File fontFile;
+    auto appDir =
+        juce::File::getSpecialLocation(juce::File::currentApplicationFile);
+
+    // Try paths
+    juce::File path1 =
+        appDir.getChildFile("Contents/Resources/NanumPenScript-Regular.ttf");
+    juce::File path2 =
+        appDir.getParentDirectory().getParentDirectory().getChildFile(
+            "Resources/NanumPenScript-Regular.ttf");
+    juce::File path3 = juce::File("/Users/vava/Documents/GitHub/vst_saturator/"
+                                  "Assets/NanumPenScript-Regular.ttf");
+    juce::File path4 =
+        juce::File("/Users/vava/Documents/GitHub/vst_saturator/"
+                   "NanumPenScript-Regular.ttf"); // Root fallback
+
+    if (path1.existsAsFile())
+      fontFile = path1;
+    else if (path2.existsAsFile())
+      fontFile = path2;
+    else if (path3.existsAsFile())
+      fontFile = path3;
+    else if (path4.existsAsFile())
+      fontFile = path4;
+
+    if (fontFile.existsAsFile()) {
+      juce::FileInputStream stream(fontFile);
+      if (stream.openedOk()) {
+        juce::MemoryBlock mb;
+        stream.readIntoMemoryBlock(mb);
+        customTypeface =
+            juce::Typeface::createSystemTypefaceFor(mb.getData(), mb.getSize());
+      }
+    }
+  }
+}
+
+juce::Font CustomLookAndFeel::getCustomFont(float height, int style) {
+  ensureFontLoaded();
+  if (customTypeface != nullptr)
+    return juce::Font(customTypeface).withHeight(height).withStyle(style);
+  return juce::Font(height, style);
+}
+
 void CustomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
                                          int width, int height,
                                          float sliderPosProportional,
@@ -193,7 +239,7 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
 
   // === 6. MIN / MAX TEXT (Small, light orange) ===
   g.setColour(juce::Colour::fromFloatRGBA(0.8f, 0.5f, 0.2f, 0.7f));
-  g.setFont(juce::Font(10.0f)); // Minuscule
+  g.setFont(getCustomFont(14.0f)); // Slightly larger for pen script
 
   juce::String minText =
       juce::String(slider.getMinimum(), 0); // No decimals usually
@@ -306,7 +352,7 @@ juce::Label *CustomLookAndFeel::createSliderTextBox(juce::Slider &slider) {
                juce::Colour::fromFloatRGBA(0.2f, 0.1f, 0.0f, 1.0f));
 
   // Font
-  l->setFont(juce::Font(16.0f, juce::Font::bold));
+  l->setFont(getCustomFont(22.0f, juce::Font::bold)); // Bold Pen Script
   l->setJustificationType(juce::Justification::centred);
 
   // Crucial: Edit on DOUBLE CLICK
@@ -354,7 +400,7 @@ void CustomLookAndFeel::drawToggleButton(juce::Graphics &g,
       button.getToggleState()
           ? juce::Colour::fromFloatRGBA(1.0f, 0.5f, 0.1f, 1.0f) // Bright orange
           : juce::Colour::fromFloatRGBA(0.6f, 0.35f, 0.1f, 0.7f)); // Dark brown
-  g.setFont(juce::Font(18.0f, juce::Font::bold)); // Increased from 16pt to 18pt
+  g.setFont(getCustomFont(24.0f, juce::Font::bold)); // Larger for pen script
   g.drawText(button.getButtonText(), bounds, juce::Justification::centred,
              true);
 }
@@ -396,7 +442,7 @@ void CustomLookAndFeel::drawComboBox(juce::Graphics &g, int width, int height,
 void CustomLookAndFeel::positionComboBoxText(juce::ComboBox &box,
                                              juce::Label &label) {
   label.setBounds(8, 1, box.getWidth() - 30, box.getHeight() - 2);
-  label.setFont(juce::Font(14.0f, juce::Font::bold));
+  label.setFont(getCustomFont(20.0f, juce::Font::bold)); // Combo text
   label.setColour(juce::Label::textColourId,
                   juce::Colour::fromFloatRGBA(0.5f, 0.3f, 0.1f, 1.0f));
 }
@@ -432,7 +478,7 @@ void CustomLookAndFeel::drawTooltip(juce::Graphics &g, const juce::String &text,
 
   // Text: Dark brown/black for contrast
   g.setColour(juce::Colour::fromFloatRGBA(0.2f, 0.1f, 0.0f, 1.0f));
-  g.setFont(juce::Font(13.0f)); // Petit texte
+  g.setFont(getCustomFont(18.0f)); // Tooltip text
   g.drawText(text, bounds.reduced(3), juce::Justification::centred, true);
 }
 
@@ -448,8 +494,8 @@ void CustomLookAndFeel::drawButtonText(juce::Graphics &g,
                                        juce::TextButton &button,
                                        bool shouldDrawButtonAsHighlighted,
                                        bool shouldDrawButtonAsDown) {
-  juce::Font font(22.0f, juce::Font::bold);
-  g.setFont(font);
+  g.setFont(
+      getCustomFont(30.0f, juce::Font::bold)); // Big bold arrows for Nanum
 
   // Orange color depending on state
   // Normal: Orange

@@ -21,8 +21,12 @@ public:
   CustomLookAndFeel();
   ~CustomLookAndFeel() override = default;
 
-  // Ensure image is loaded
+  // Ensure resources (image + font) are loaded
   void ensureImageLoaded();
+  void ensureFontLoaded();
+
+  // Helper to get consistent font
+  juce::Font getCustomFont(float height, int style = juce::Font::plain);
 
   // Draw the rotary slider (knob) with minimal design
   void drawRotarySlider(juce::Graphics &g, int x, int y, int width, int height,
@@ -68,6 +72,8 @@ public:
                       bool shouldDrawButtonAsDown) override;
 
 private:
+private:
   juce::Image indicatorImage;
+  juce::Typeface::Ptr customTypeface;
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CustomLookAndFeel)
 };
