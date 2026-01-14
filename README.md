@@ -6,17 +6,18 @@
 ![VST3](https://img.shields.io/badge/Format-VST3-orange?style=for-the-badge)
 ![Steve](https://img.shields.io/badge/Mascot-Steve_The_Fish-blueviolet?style=for-the-badge)
 
-[![Download Artifacts](https://img.shields.io/badge/📥_Download-Latest_Build_(Artifacts)-success?style=for-the-badge&logo=github)](../../actions)
-[![Releases](https://img.shields.io/badge/🚀_Download-Stable_Release-blue?style=for-the-badge&logo=github)](../../releases)
+## 📥 Téléchargement / Download
 
-Bienvenue sur la documentation officielle du **Steverator**, un plugin de saturation audio unique en son genre, accompagné de Steve le poisson.
+**[➡️ Télécharger la dernière version / Download Latest Release](../../releases/latest)**
+
+Visitez la [page des releases](../../releases) pour télécharger le plugin pour macOS ou Windows.
 
 ---
 
 # 🇫🇷 MANUEL UTILISATEUR
 
 ### Introduction
-Le Steverator est un processeur de saturation multi-bandes conçu pour apporter chaleur, caractère et grain à vos pistes audio. Que ce soit pour réchauffer une basse, donner du mordant à une voix ou salir une batterie, Steve est là pour vous aider.
+Le Steverator est un processeur de saturation multi-bandes conçu pour apporter chaleur, caractère et grain à vos pistes audio. Que ce soit pour réchauffer une basse, donner du mordant à une voix [...]
 
 ### Interface & Réglages
 
@@ -49,7 +50,7 @@ Le cœur du traitement :
 #### 4. Section Master (Droite & Bas)
 *   **Mix** : Mélange le son traité (Wet) avec le son d'origine (Dry). Parfait pour de la compression/saturation parallèle.
 *   **Output (Sortie)** : Niveau de sortie final.
-*   **Delta Monitor** : Un outil puissant qui vous permet d'écouter **uniquement** ce que le plugin ajoute (la distorsion). Très utile pour régler finement l'effet sans être distrait par le son original.
+*   **Delta Monitor** : Un outil puissant qui vous permet d'écouter **uniquement** ce que le plugin ajoute (la distorsion). Très utile pour régler finement l'effet sans être distrait par le son or[...]
 *   **Delta Gain** : Ajuste le volume de ce signal "Delta" pour le rendre plus audible ou éviter qu'il ne sature.
 *   **Limiter** : Un limiteur de sécurité en fin de chaîne pour éviter les pics numériques désagréables.
 
@@ -58,7 +59,7 @@ Le cœur du traitement :
 # 🇬🇧 USER MANUAL
 
 ### Introduction
-Steverator is a unique multi-band saturation plugin featuring Steve the Fish. It is designed to add warmth, character, and grit to your audio tracks. Whether you need to fatten up a bass, add bite to vocals, or dirt up drums, Steve is here to serve.
+Steverator is a unique multi-band saturation plugin featuring Steve the Fish. It is designed to add warmth, character, and grit to your audio tracks. Whether you need to fatten up a bass, add bite to [...]
 
 ### Interface & Controls
 
@@ -169,4 +170,3 @@ steverator/
     ├── indicator.png           # 🟠 Knob position indicator
     └── NanumPenScript-Regular.ttf # 📝 Custom Handwriting Font
 ```
-
