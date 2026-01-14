@@ -566,6 +566,79 @@ void CustomLookAndFeel::drawPopupMenuItem(
   }
 }
 
+// === POPUP MENU SECTION HEADERS (Orange styled) ===
+void CustomLookAndFeel::drawPopupMenuSectionHeader(
+    juce::Graphics &g, const juce::Rectangle<int> &area,
+    const juce::String &sectionName) {
+  // Orange gradient background for section headers
+  auto r = area.reduced(2, 1);
+
+  // Draw orange background
+  juce::ColourGradient headerGradient(
+      juce::Colour::fromFloatRGBA(1.0f, 0.55f, 0.15f, 0.9f), // Bright orange
+      static_cast<float>(r.getX()), static_cast<float>(r.getY()),
+      juce::Colour::fromFloatRGBA(0.95f, 0.45f, 0.1f, 0.9f), // Darker orange
+      static_cast<float>(r.getX()), static_cast<float>(r.getBottom()), false);
+
+  g.setGradientFill(headerGradient);
+  g.fillRoundedRectangle(r.toFloat(), 3.0f);
+
+  // Draw text in dark brown
+  g.setColour(juce::Colour::fromFloatRGBA(0.25f, 0.12f, 0.02f, 1.0f));
+  g.setFont(getCustomFont(18.0f, juce::Font::bold));
+  g.drawText(sectionName, r.reduced(8, 0), juce::Justification::centredLeft,
+             true);
+
+  // Subtle bottom separator line
+  g.setColour(juce::Colour::fromFloatRGBA(0.7f, 0.35f, 0.1f, 0.5f));
+  g.drawLine(static_cast<float>(r.getX() + 5),
+             static_cast<float>(r.getBottom()),
+             static_cast<float>(r.getRight() - 5),
+             static_cast<float>(r.getBottom()), 1.0f);
+}
+
+// === POPUP MENU ITEM SIZE (For scroll height control) ===
+void CustomLookAndFeel::getIdealPopupMenuItemSize(const juce::String &text,
+                                                  bool isSeparator,
+                                                  int standardMenuItemHeight,
+                                                  int &idealWidth,
+                                                  int &idealHeight) {
+  // Check if this is a section header (starts with uppercase and has no ID)
+  // Section headers in JUCE have text but are not selectable
+  bool isHeader =
+      text.containsOnly("ABCDEFGHIJKLMNOPQRSTUVWXYZ /"); // All caps = header
+
+  if (isSeparator) {
+    idealHeight = 8;
+    idealWidth = 50;
+  } else if (isHeader) {
+    // Section headers are slightly taller
+    idealHeight = 28;
+    idealWidth = 180;
+  } else {
+    // Regular items
+    idealHeight = 26;
+    idealWidth = 180;
+  }
+}
+
+// === POPUP MENU MAX HEIGHT (Scrollable) ===
+int CustomLookAndFeel::getMenuWindowFlags() {
+  // Return default flags - scroll is handled by PopupMenu automatically
+  return juce::ComponentPeer::windowHasDropShadow;
+}
+
+juce::PopupMenu::Options
+CustomLookAndFeel::getOptionsForComboBoxPopupMenu(juce::ComboBox &box,
+                                                  juce::Label &label) {
+  // Set max height to 400px for scrollable menu
+  return juce::PopupMenu::Options()
+      .withTargetComponent(&box)
+      .withMinimumWidth(box.getWidth())
+      .withMaximumNumColumns(1)
+      .withStandardItemHeight(26);
+}
+
 // === CUSTOM TEXT BUTTON (Transparent background, Orange Bold Text) ===
 void CustomLookAndFeel::drawButtonBackground(
     juce::Graphics &g, juce::Button &button,

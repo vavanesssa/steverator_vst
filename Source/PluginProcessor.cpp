@@ -59,38 +59,79 @@ Vst_saturatorAudioProcessor::createParameterLayout() {
   layout.add(std::make_unique<juce::AudioParameterFloat>("shape", "Shape", 0.0f,
                                                          1.0f, 0.0f));
 
-  // Waveshape selection
+  // Waveshape selection - 58 algorithms total
   layout.add(std::make_unique<juce::AudioParameterChoice>(
       "waveshape", // Parameter ID
       "Waveshape", // Parameter Name
-      juce::StringArray{"Tube",
-                        "SoftClip",
-                        "HardClip",
-                        "Diode 1",
-                        "Diode 2",
-                        "Linear Fold",
-                        "Sin Fold",
-                        "Zero-Square",
-                        "Downsample",
-                        "Asym",
-                        "Rectify",
-                        "X-Shaper",
-                        "X-Shaper (Asym)",
-                        "Sine Shaper",
-                        "Stomp Box",
-                        "Tape Sat.",
-                        "Overdrive",
-                        "Soft Sat.",
-                        "Bit-Crush",
-                        "Glitch Fold",
-                        "Valve",
-                        "Fuzz Fac",
-                        "Cheby 3",
-                        "Cheby 5",
-                        "Log Sat",
-                        "Half Wave",
-                        "Cubic",
-                        "Octaver Sat"},
+      juce::StringArray{
+          // === CLASSIC (0-9) ===
+          "Tube",        // 0
+          "SoftClip",    // 1
+          "HardClip",    // 2
+          "Diode 1",     // 3
+          "Diode 2",     // 4
+          "Linear Fold", // 5
+          "Sin Fold",    // 6
+          "Zero-Square", // 7
+          "Downsample",  // 8
+          "Asym",        // 9
+          // === SHAPERS (10-19) ===
+          "Rectify",         // 10
+          "X-Shaper",        // 11
+          "X-Shaper (Asym)", // 12
+          "Sine Shaper",     // 13
+          "Stomp Box",       // 14
+          "Tape Sat.",       // 15
+          "Overdrive",       // 16
+          "Soft Sat.",       // 17
+          "Bit-Crush",       // 18
+          "Glitch Fold",     // 19
+          // === ANALOG (20-27) ===
+          "Valve",       // 20
+          "Fuzz Fac",    // 21
+          "Cheby 3",     // 22
+          "Cheby 5",     // 23
+          "Log Sat",     // 24
+          "Half Wave",   // 25
+          "Cubic",       // 26
+          "Octaver Sat", // 27
+          // === NEW: TUBE TYPES (28-33) - Inspired by Decapitator ===
+          "Triode",    // 28 - Classic 12AX7 warmth
+          "Pentode",   // 29 - EL34 power tube push
+          "Class A",   // 30 - Single-ended warmth
+          "Class AB",  // 31 - Push-pull punch
+          "Class B",   // 32 - Crossover distortion
+          "Germanium", // 33 - Vintage transistor fuzz
+          // === NEW: TAPE MODES (34-38) - Inspired by Saturn ===
+          "Tape 15ips",    // 34 - Fast tape, bright
+          "Tape 7.5ips",   // 35 - Slow tape, warm
+          "Tape Cassette", // 36 - Lo-fi cassette
+          "Tape 456",      // 37 - Ampex 456 style
+          "Tape SM900",    // 38 - Modern tape emulation
+          // === NEW: TRANSFORMER (39-42) ===
+          "Transformer", // 39 - Iron saturation
+          "Console",     // 40 - Neve-style console
+          "API Style",   // 41 - API 2500 character
+          "SSL Style",   // 42 - SSL G-Series
+          // === NEW: TRANSISTOR (43-47) ===
+          "Silicon",   // 43 - Modern transistor
+          "FET Clean", // 44 - FET limiter style
+          "FET Dirty", // 45 - FET pushed hard
+          "OpAmp",     // 46 - IC distortion
+          "CMOS",      // 47 - Digital/analog hybrid
+          // === NEW: CREATIVE (48-52) - Inspired by Trash 2 ===
+          "Scream",  // 48 - Aggressive screamer
+          "Buzz",    // 49 - Buzzy distortion
+          "Crackle", // 50 - Random crackle
+          "Wrap",    // 51 - Wrap-around distortion
+          "Density", // 52 - Thick density
+          // === NEW: MATH/EXOTIC (53-57) ===
+          "Cheby 7",     // 53 - 7th order Chebyshev
+          "Hyperbolic",  // 54 - sinh based
+          "Exponential", // 55 - exp based limiting
+          "Parabolic",   // 56 - Parabolic curve
+          "Wavelet"      // 57 - Wavelet-inspired
+      },
       0 // Default: Tube
       ));
 
@@ -532,6 +573,258 @@ void Vst_saturatorAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     case 27: // Octaver Sat
       output = (std::abs(x) * 2.0f - 1.0f) * (0.5f + shapeParam * 0.5f);
       break;
+
+    // ========== NEW WAVESHAPES (28-57) ==========
+
+    // === TUBE TYPES (28-33) - Inspired by Decapitator ===
+    case 28: // Triode - Classic 12AX7 warmth
+    {
+      float mu = 100.0f; // Amplification factor
+      float kp = 1.2f + shapeParam * 0.8f;
+      float vg = x * (1.0f + shapeParam);
+      output = (vg > 0.0f) ? std::tanh(vg / kp) * kp
+                           : vg / (1.0f + std::abs(vg) * mu * 0.01f);
+      break;
+    }
+    case 29: // Pentode - EL34 power tube push
+    {
+      float screen = 0.7f + shapeParam * 0.3f;
+      float plate = x * (1.5f + shapeParam);
+      output = std::tanh(plate * screen) +
+               0.1f * std::sin(plate * 3.0f) * shapeParam;
+      break;
+    }
+    case 30: // Class A - Single-ended warmth
+    {
+      float bias = 0.3f * shapeParam;
+      float biased = x + bias;
+      output = std::tanh(biased * (1.0f + shapeParam)) - bias * 0.5f;
+      break;
+    }
+    case 31: // Class AB - Push-pull punch
+    {
+      float threshold = 0.3f - shapeParam * 0.2f;
+      if (std::abs(x) < threshold) {
+        output = x * (1.0f + shapeParam * 2.0f);
+      } else {
+        output = (x > 0.0f ? 1.0f : -1.0f) *
+                 (threshold + std::tanh((std::abs(x) - threshold) *
+                                        (2.0f + shapeParam * 3.0f)));
+      }
+      break;
+    }
+    case 32: // Class B - Crossover distortion
+    {
+      float deadzone = 0.05f + shapeParam * 0.1f;
+      if (std::abs(x) < deadzone) {
+        output = 0.0f;
+      } else {
+        output =
+            (x > 0.0f ? 1.0f : -1.0f) *
+            std::tanh((std::abs(x) - deadzone) * (1.0f + shapeParam * 3.0f));
+      }
+      break;
+    }
+    case 33: // Germanium - Vintage transistor fuzz
+    {
+      float temp = 0.8f + shapeParam * 0.4f; // Temperature coefficient
+      float biased = x + 0.1f * shapeParam;
+      output = (biased > 0.0f ? 1.0f : -1.0f) *
+               (1.0f - std::exp(-std::abs(biased) * temp * 5.0f));
+      output *= 0.9f + 0.1f * shapeParam;
+      break;
+    }
+
+    // === TAPE MODES (34-38) - Inspired by Saturn ===
+    case 34: // Tape 15ips - Fast tape, bright
+    {
+      float headroom = 1.2f - shapeParam * 0.3f;
+      float compression = std::tanh(x / headroom) * headroom;
+      output = compression + 0.05f * x * shapeParam; // Some HF retention
+      break;
+    }
+    case 35: // Tape 7.5ips - Slow tape, warm
+    {
+      float satPoint = 0.6f + shapeParam * 0.3f;
+      float warmth = x + 0.15f * x * x * (x > 0.0f ? 1.0f : -1.0f);
+      output = std::tanh(warmth / satPoint) * satPoint;
+      break;
+    }
+    case 36: // Tape Cassette - Lo-fi cassette
+    {
+      float hfLoss = 1.0f - shapeParam * 0.4f;
+      float saturated = std::tanh(x * (1.0f + shapeParam * 2.0f));
+      output = saturated * hfLoss + x * (1.0f - hfLoss) * 0.5f;
+      break;
+    }
+    case 37: // Tape 456 - Ampex 456 style (famous for punchy low end)
+    {
+      float hysteresis = x + 0.2f * x * std::abs(x) * shapeParam;
+      output = std::tanh(hysteresis * (1.0f + shapeParam * 0.5f));
+      break;
+    }
+    case 38: // Tape SM900 - Modern tape emulation
+    {
+      float modern = std::tanh(x * 1.1f);
+      float vintage = x / (1.0f + std::abs(x) * 0.5f);
+      output = modern * (1.0f - shapeParam) + vintage * shapeParam;
+      break;
+    }
+
+    // === TRANSFORMER (39-42) ===
+    case 39: // Transformer - Iron saturation
+    {
+      float iron = x + 0.3f * std::sin(x * 2.0f) * shapeParam;
+      output = std::tanh(iron * (1.0f + shapeParam));
+      break;
+    }
+    case 40: // Console - Neve-style console
+    {
+      float harmonic2 = 0.1f * x * std::abs(x) * shapeParam;
+      float harmonic3 = 0.05f * x * x * x * shapeParam;
+      output = std::tanh(x + harmonic2 + harmonic3);
+      break;
+    }
+    case 41: // API Style - API 2500 character (punchy)
+    {
+      float punch = x * (1.0f + shapeParam * 0.5f);
+      float clipped = juce::jlimit(-1.0f, 1.0f, punch * 1.5f);
+      output = punch * (1.0f - shapeParam * 0.5f) + clipped * shapeParam * 0.5f;
+      output = std::tanh(output);
+      break;
+    }
+    case 42: // SSL Style - SSL G-Series (clean but present)
+    {
+      float compressed = x / (1.0f + std::abs(x) * shapeParam * 0.5f);
+      float harmonic = 0.05f * x * x * x * shapeParam;
+      output = compressed + harmonic;
+      break;
+    }
+
+    // === TRANSISTOR (43-47) ===
+    case 43: // Silicon - Modern transistor
+    {
+      float gain = 1.0f + shapeParam * 3.0f;
+      float clipPoint = 0.8f - shapeParam * 0.2f;
+      output = juce::jlimit(-clipPoint, clipPoint, x * gain);
+      output = std::tanh(output / clipPoint) * clipPoint;
+      break;
+    }
+    case 44: // FET Clean - FET limiter style (1176 clean)
+    {
+      float ratio = 4.0f + shapeParam * 16.0f;
+      float threshold = 0.5f;
+      if (std::abs(x) > threshold) {
+        float excess = std::abs(x) - threshold;
+        output = (x > 0.0f ? 1.0f : -1.0f) * (threshold + excess / ratio);
+      } else {
+        output = x;
+      }
+      break;
+    }
+    case 45: // FET Dirty - FET pushed hard (1176 all-buttons)
+    {
+      float attack = x * (2.0f + shapeParam * 4.0f);
+      output = std::tanh(attack) * (0.8f + shapeParam * 0.2f);
+      output += 0.1f * std::sin(x * 5.0f) * shapeParam; // Harmonics
+      break;
+    }
+    case 46: // OpAmp - IC distortion
+    {
+      float gain = 1.0f + shapeParam * 10.0f;
+      float clipped = juce::jlimit(-1.0f, 1.0f, x * gain);
+      output = clipped * (1.0f - shapeParam * 0.3f) +
+               std::tanh(x * gain) * shapeParam * 0.3f;
+      break;
+    }
+    case 47: // CMOS - Digital/analog hybrid
+    {
+      float digital = (x > 0.0f ? 1.0f : -1.0f) * std::pow(std::abs(x), 0.5f);
+      float analog = std::tanh(x * (1.0f + shapeParam));
+      output = digital * shapeParam + analog * (1.0f - shapeParam);
+      break;
+    }
+
+    // === CREATIVE (48-52) - Inspired by Trash 2 ===
+    case 48: // Scream - Aggressive screamer
+    {
+      float scream = x * (3.0f + shapeParam * 7.0f);
+      output = std::tanh(scream) + 0.2f * std::sin(scream * 3.0f) * shapeParam;
+      output = juce::jlimit(-1.0f, 1.0f, output);
+      break;
+    }
+    case 49: // Buzz - Buzzy distortion
+    {
+      float buzz = x + 0.3f * std::sin(x * 10.0f * (1.0f + shapeParam * 5.0f));
+      output = std::tanh(buzz * (1.0f + shapeParam));
+      break;
+    }
+    case 50: // Crackle - Subtle noise/crackle character
+    {
+      float noise =
+          (static_cast<float>(rand()) / RAND_MAX - 0.5f) * 0.02f * shapeParam;
+      output = std::tanh(x * (1.0f + shapeParam * 2.0f)) + noise * std::abs(x);
+      break;
+    }
+    case 51: // Wrap - Wrap-around distortion
+    {
+      float wrapped = x * (1.0f + shapeParam * 3.0f);
+      wrapped = std::fmod(wrapped + 3.0f, 2.0f) - 1.0f;
+      output = wrapped;
+      break;
+    }
+    case 52: // Density - Thick density
+    {
+      float density = std::tanh(x * 2.0f) + std::tanh(x * 0.5f);
+      output = density * 0.5f * (1.0f + shapeParam * 0.5f);
+      break;
+    }
+
+    // === MATH/EXOTIC (53-57) ===
+    case 53: // Cheby 7 - 7th order Chebyshev
+    {
+      float xl = juce::jlimit(-1.0f, 1.0f, x);
+      float x2 = xl * xl;
+      float x3 = x2 * xl;
+      float x5 = x3 * x2;
+      float x7 = x5 * x2;
+      output = (64.0f * x7 - 112.0f * x5 + 56.0f * x3 - 7.0f * xl) *
+               (0.3f + shapeParam * 0.7f);
+      break;
+    }
+    case 54: // Hyperbolic - sinh based
+    {
+      float scale = 0.5f + shapeParam * 1.5f;
+      output = std::sinh(x * scale) / std::cosh(x * scale * 2.0f);
+      break;
+    }
+    case 55: // Exponential - exp based limiting
+    {
+      float sign = x > 0.0f ? 1.0f : -1.0f;
+      float absX = std::abs(x);
+      float rate = 2.0f + shapeParam * 4.0f;
+      output = sign * (1.0f - std::exp(-absX * rate));
+      break;
+    }
+    case 56: // Parabolic - Parabolic curve
+    {
+      float scaled = x * (1.0f + shapeParam * 2.0f);
+      if (std::abs(scaled) < 1.0f) {
+        output = scaled - (scaled * scaled * scaled) / 3.0f;
+      } else {
+        output = (scaled > 0.0f ? 1.0f : -1.0f) * (2.0f / 3.0f);
+      }
+      break;
+    }
+    case 57: // Wavelet - Wavelet-inspired (Mexican hat)
+    {
+      float t = x * (2.0f + shapeParam * 4.0f);
+      float t2 = t * t;
+      output = (1.0f - t2) * std::exp(-t2 * 0.5f);
+      output *= (1.0f + shapeParam);
+      break;
+    }
+
     default:
       output = std::tanh(x);
       break;

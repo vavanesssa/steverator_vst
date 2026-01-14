@@ -72,6 +72,22 @@ public:
                          const juce::Drawable *icon,
                          const juce::Colour *textColourToUse) override;
 
+  // Section headers styling (orange separators for categories)
+  void drawPopupMenuSectionHeader(juce::Graphics &g,
+                                  const juce::Rectangle<int> &area,
+                                  const juce::String &sectionName) override;
+
+  // Item height control for scrollable menus
+  void getIdealPopupMenuItemSize(const juce::String &text, bool isSeparator,
+                                 int standardMenuItemHeight, int &idealWidth,
+                                 int &idealHeight) override;
+
+  // Menu flags and combo popup options
+  int getMenuWindowFlags() override;
+  juce::PopupMenu::Options
+  getOptionsForComboBoxPopupMenu(juce::ComboBox &box,
+                                 juce::Label &label) override;
+
   // Custom styling for TextButtons (Nav arrows)
   void drawButtonBackground(juce::Graphics &g, juce::Button &button,
                             const juce::Colour &backgroundColour,
