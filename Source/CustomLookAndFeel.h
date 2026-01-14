@@ -71,6 +71,11 @@ public:
                       bool shouldDrawButtonAsHighlighted,
                       bool shouldDrawButtonAsDown) override;
 
+  // Override default fonts
+  juce::Font getComboBoxFont(juce::ComboBox &) override;
+  juce::Font getLabelFont(juce::Label &) override;
+  juce::Font getPopupMenuFont() override;
+
 private:
 private:
   juce::Image indicatorImage;

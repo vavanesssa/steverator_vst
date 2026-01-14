@@ -14,10 +14,13 @@
 */
 
 #include "CustomLookAndFeel.h"
+#include "BinaryData.h"
 
-#include "CustomLookAndFeel.h"
-
-CustomLookAndFeel::CustomLookAndFeel() {}
+CustomLookAndFeel::CustomLookAndFeel() {
+  // Force load the custom font immediately
+  DBG("CustomLookAndFeel constructor - loading font...");
+  ensureFontLoaded();
+}
 
 void CustomLookAndFeel::ensureImageLoaded() {
   if (indicatorImage.isNull()) {
@@ -47,6 +50,30 @@ void CustomLookAndFeel::ensureImageLoaded() {
 
 void CustomLookAndFeel::ensureFontLoaded() {
   if (customTypeface == nullptr) {
+    DBG("=== FONT LOADING DEBUG ===");
+    DBG("Attempting to load from BinaryData...");
+
+    // First try to load from embedded BinaryData (most reliable)
+    int dataSize = 0;
+    const char *fontData =
+        BinaryData::getNamedResource("NanumPenScriptRegular_ttf", dataSize);
+
+    if (fontData != nullptr && dataSize > 0) {
+      DBG("✓ Found font in BinaryData: " + juce::String(dataSize) + " bytes");
+      customTypeface =
+          juce::Typeface::createSystemTypefaceFor(fontData, (size_t)dataSize);
+      if (customTypeface != nullptr) {
+        DBG("✓✓✓ FONT LOADED SUCCESSFULLY FROM BINARYDATA! Name: " +
+            customTypeface->getName());
+        return;
+      } else {
+        DBG("✗ Failed to create typeface from BinaryData");
+      }
+    } else {
+      DBG("⚠ Font not found in BinaryData, trying filesystem...");
+    }
+
+    // Fallback: Try to load from filesystem
     juce::File fontFile;
     auto appDir =
         juce::File::getSpecialLocation(juce::File::currentApplicationFile);
@@ -63,6 +90,15 @@ void CustomLookAndFeel::ensureFontLoaded() {
         juce::File("/Users/vava/Documents/GitHub/vst_saturator/"
                    "NanumPenScript-Regular.ttf"); // Root fallback
 
+    DBG("Path 1 exists: " + juce::String(path1.existsAsFile() ? "YES" : "NO") +
+        " - " + path1.getFullPathName());
+    DBG("Path 2 exists: " + juce::String(path2.existsAsFile() ? "YES" : "NO") +
+        " - " + path2.getFullPathName());
+    DBG("Path 3 exists: " + juce::String(path3.existsAsFile() ? "YES" : "NO") +
+        " - " + path3.getFullPathName());
+    DBG("Path 4 exists: " + juce::String(path4.existsAsFile() ? "YES" : "NO") +
+        " - " + path4.getFullPathName());
+
     if (path1.existsAsFile())
       fontFile = path1;
     else if (path2.existsAsFile())
@@ -73,21 +109,42 @@ void CustomLookAndFeel::ensureFontLoaded() {
       fontFile = path4;
 
     if (fontFile.existsAsFile()) {
+      DBG("✓ Font file found: " + fontFile.getFullPathName());
       juce::FileInputStream stream(fontFile);
       if (stream.openedOk()) {
         juce::MemoryBlock mb;
         stream.readIntoMemoryBlock(mb);
+        DBG("✓ File loaded into memory: " + juce::String(mb.getSize()) +
+            " bytes");
         customTypeface =
             juce::Typeface::createSystemTypefaceFor(mb.getData(), mb.getSize());
+        if (customTypeface != nullptr) {
+          DBG("✓✓✓ FONT LOADED SUCCESSFULLY FROM FILE! Name: " +
+              customTypeface->getName());
+        } else {
+          DBG("✗✗✗ FAILED to create typeface from file memory!");
+        }
+      } else {
+        DBG("✗ Failed to open file stream");
       }
+    } else {
+      DBG("✗✗✗ NO FONT FILE FOUND IN ANY PATH!");
     }
+  } else {
+    DBG("Font already loaded: " + customTypeface->getName());
   }
 }
 
 juce::Font CustomLookAndFeel::getCustomFont(float height, int style) {
   ensureFontLoaded();
-  if (customTypeface != nullptr)
-    return juce::Font(customTypeface).withHeight(height).withStyle(style);
+  if (customTypeface != nullptr) {
+    juce::Font font(customTypeface);
+    font = font.withHeight(height);
+    if (style != juce::Font::plain)
+      font = font.withStyle(style);
+    return font;
+  }
+  DBG("⚠ WARNING: Using fallback font (custom font not loaded)");
   return juce::Font(height, style);
 }
 
@@ -454,7 +511,7 @@ CustomLookAndFeel::getTooltipBounds(const juce::String &tipText,
   const int padding = 6;
   juce::TextLayout layout;
   juce::AttributedString str(tipText);
-  str.setFont(juce::Font(13.0f));
+  str.setFont(getCustomFont(18.0f)); // Use NanumPenScript font
   layout.createLayout(str, 300.0f);
 
   int w = (int)layout.getWidth() + padding * 2;
@@ -515,4 +572,22 @@ void CustomLookAndFeel::drawButtonText(juce::Graphics &g,
   // Draw text centered
   g.drawText(button.getButtonText(), button.getLocalBounds(),
              juce::Justification::centred, false);
+}
+
+// === OVERRIDE DEFAULT FONTS ===
+juce::Font CustomLookAndFeel::getComboBoxFont(juce::ComboBox &) {
+  return getCustomFont(20.0f, juce::Font::bold);
+}
+
+juce::Font CustomLookAndFeel::getLabelFont(juce::Label &label) {
+  // Return custom font for all labels
+  // Try to keep the size if already set, otherwise default to 20pt
+  float currentHeight = label.getFont().getHeight();
+  if (currentHeight < 12.0f)
+    currentHeight = 20.0f; // Ensure minimum readable size
+  return getCustomFont(currentHeight, juce::Font::bold);
+}
+
+juce::Font CustomLookAndFeel::getPopupMenuFont() {
+  return getCustomFont(18.0f, juce::Font::plain);
 }

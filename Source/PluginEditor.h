@@ -56,9 +56,7 @@ private:
 
   // A. Saturation Globale
   juce::Slider saturationSlider, shapeSlider;
-  juce::Label saturationLabel, shapeLabel;
   juce::ComboBox waveshapeCombo;
-  juce::Label waveshapeLabel;
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
       saturationAttachment;
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
@@ -69,7 +67,6 @@ private:
   // B. Bande LOW
   juce::ToggleButton lowEnableButton;
   juce::Slider lowFreqSlider, lowWarmthSlider, lowLevelSlider;
-  juce::Label lowFreqLabel, lowWarmthLabel, lowLevelLabel;
   std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>
       lowEnableAttachment;
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
@@ -82,7 +79,6 @@ private:
   // C. Bande HIGH
   juce::ToggleButton highEnableButton;
   juce::Slider highFreqSlider, highSoftnessSlider, highLevelSlider;
-  juce::Label highFreqLabel, highSoftnessLabel, highLevelLabel;
   std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>
       highEnableAttachment;
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
@@ -94,7 +90,6 @@ private:
 
   // D. Gain & Routing
   juce::Slider inputGainSlider, mixSlider, outputGainSlider;
-  juce::Label inputGainLabel, mixLabel, outputGainLabel;
   juce::ToggleButton prePostButton, limiterButton, bypassButton;
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
       inputGainAttachment;
@@ -112,7 +107,6 @@ private:
   // E. Delta Monitoring
   juce::ToggleButton deltaButton;
   juce::Slider deltaGainSlider;
-  juce::Label deltaGainLabel;
   std::unique_ptr<juce::AudioProcessorValueTreeState::ButtonAttachment>
       deltaAttachment;
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>

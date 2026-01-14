@@ -82,30 +82,15 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
     addAndMakeVisible(button);
   };
 
-  auto configureLabel = [&](juce::Label &label, const juce::String &text) {
-    label.setText(text, juce::dontSendNotification);
-    label.setJustificationType(juce::Justification::centred);
-    label.setColour(
-        juce::Label::textColourId,
-        juce::Colour::fromFloatRGBA(0.5f, 0.3f, 0.1f, 1.0f)); // Dark brown
-    label.setFont(
-        juce::Font(20.0f, juce::Font::bold)); // Increased from 16pt to 20pt
-    addAndMakeVisible(label);
-  };
-
   // A. Saturation Globale
   // A. Saturation Globale
   configureSlider(
       saturationSlider, "drive",
       juce::CharPointer_UTF8("Contrôle la quantité de saturation globale"));
-  configureLabel(saturationLabel, "Saturation");
-  saturationLabel.attachToComponent(&saturationSlider, false);
 
   configureSlider(shapeSlider, "shape",
                   juce::CharPointer_UTF8(
                       "Modifie la couleur et l'agressivité de la distorsion"));
-  configureLabel(shapeLabel, "Shape");
-  shapeLabel.attachToComponent(&shapeSlider, false);
 
   // Waveshape ComboBox
   waveshapeCombo.addItemList(
@@ -118,8 +103,6 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   waveshapeCombo.setTooltip(
       juce::CharPointer_UTF8("Choisissez le type d'algorithme de saturation"));
   addAndMakeVisible(waveshapeCombo);
-  configureLabel(waveshapeLabel, "WAVE");
-  waveshapeLabel.attachToComponent(&waveshapeCombo, false);
 
   attachSlider(saturationAttachment, "drive", saturationSlider);
   attachSlider(shapeAttachment, "shape", shapeSlider);
@@ -137,20 +120,14 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   configureSlider(lowFreqSlider, "lowFreq",
                   juce::CharPointer_UTF8(
                       "Fréquence de coupure de la bande basse (Crossover)"));
-  configureLabel(lowFreqLabel, "Low Freq");
-  lowFreqLabel.attachToComponent(&lowFreqSlider, false);
 
   configureSlider(
       lowWarmthSlider, "lowWarmth",
       juce::CharPointer_UTF8(
           "Ajoute de la chaleur et du corps aux basses fréquences"));
-  configureLabel(lowWarmthLabel, "Low Warmth");
-  lowWarmthLabel.attachToComponent(&lowWarmthSlider, false);
 
   configureSlider(lowLevelSlider, "lowLevel",
                   juce::CharPointer_UTF8("Volume de sortie de la bande basse"));
-  configureLabel(lowLevelLabel, "Low Level");
-  lowLevelLabel.attachToComponent(&lowLevelSlider, false);
 
   attachSlider(lowFreqAttachment, "lowFreq", lowFreqSlider);
   attachSlider(lowWarmthAttachment, "lowWarmth", lowWarmthSlider);
@@ -166,19 +143,13 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   configureSlider(highFreqSlider, "highFreq",
                   juce::CharPointer_UTF8(
                       "Fréquence de coupure de la bande haute (Crossover)"));
-  configureLabel(highFreqLabel, "High Freq");
-  highFreqLabel.attachToComponent(&highFreqSlider, false);
 
   configureSlider(
       highSoftnessSlider, "highSoftness",
       juce::CharPointer_UTF8("Adoucit les hautes fréquences (effet ''Tape'')"));
-  configureLabel(highSoftnessLabel, "High Softness");
-  highSoftnessLabel.attachToComponent(&highSoftnessSlider, false);
 
   configureSlider(highLevelSlider, "highLevel",
                   juce::CharPointer_UTF8("Volume de sortie de la bande haute"));
-  configureLabel(highLevelLabel, "High Level");
-  highLevelLabel.attachToComponent(&highLevelSlider, false);
 
   attachSlider(highFreqAttachment, "highFreq", highFreqSlider);
   attachSlider(highSoftnessAttachment, "highSoftness", highSoftnessSlider);
@@ -187,18 +158,12 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   // D. Gain & Routing
   configureSlider(inputGainSlider, "inputGain",
                   juce::CharPointer_UTF8("Gain d'entrée avant le traitement"));
-  configureLabel(inputGainLabel, "Input");
-  inputGainLabel.attachToComponent(&inputGainSlider, false);
 
   configureSlider(mixSlider, "mix",
                   juce::CharPointer_UTF8("Mélange Dry/Wet du signal global"));
-  configureLabel(mixLabel, "Mix");
-  mixLabel.attachToComponent(&mixSlider, false);
 
   configureSlider(outputGainSlider, "output",
                   juce::CharPointer_UTF8("Gain de sortie final"));
-  configureLabel(outputGainLabel, "Output");
-  outputGainLabel.attachToComponent(&outputGainSlider, false);
 
   attachSlider(inputGainAttachment, "inputGain", inputGainSlider);
   attachSlider(mixAttachment, "mix", mixSlider);
@@ -239,8 +204,7 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
       deltaGainSlider, "deltaGain",
       juce::CharPointer_UTF8(
           "Gain du signal Delta (réduction de niveau pour la sécurité audio)"));
-  configureLabel(deltaGainLabel, "Delta Gain");
-  deltaGainLabel.attachToComponent(&deltaGainSlider, false);
+
   attachSlider(deltaGainAttachment, "deltaGain", deltaGainSlider);
 
   // F. Presets Menu (Top bar with navigation arrows)
@@ -264,6 +228,8 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
     }
   };
   addAndMakeVisible(presetsCombo);
+
+  // Presets Label
 
   // Preset navigation buttons (arrows)
   auto configureNavButton = [&](juce::TextButton &btn,
@@ -372,17 +338,7 @@ void Vst_saturatorAudioProcessorEditor::paint(juce::Graphics &g) {
       audioProcessor.currentRMSLevel.load(std::memory_order_relaxed);
   bool isTalking = currentLevel > 0.005f;
 
-  // === TOP BAR LABELS ===
-  g.setColour(
-      juce::Colour::fromFloatRGBA(0.5f, 0.3f, 0.1f, 1.0f)); // Dark Brown
-  g.setFont(customLookAndFeel.getCustomFont(22.0f, juce::Font::bold));
-
-  // Presets is above the preset combo (x=480, y=45) - Label at y=20
-  g.drawText("PRESETS", 480, 20, 200, 25, juce::Justification::centred, true);
-
-  // Wave is above wave combo (x=900, y=45) - Label at y=20
-  g.drawText("WAVE", 900, 20, 200, 25, juce::Justification::centred, true);
-
+  // === Draw Steve Image ===
   juce::Image *imgToDraw = &steveImage;
 
   // If talking and we have the second image, swap!
@@ -398,6 +354,114 @@ void Vst_saturatorAudioProcessorEditor::paint(juce::Graphics &g) {
                       imageBounds.getWidth(), imageBounds.getHeight(),
                       juce::RectanglePlacement::centred, false);
   }
+
+  // === SECOND WAVEFORM VISUALIZER (over Steve image, more opaque) ===
+  // Draw a second instance of the waveform over the Steve image area
+  // with higher opacity for better visibility
+  g.setColour(juce::Colour::fromFloatRGBA(
+      1.0f, 0.6f, 0.1f, 0.4f)); // More opaque (0.4 instead of 0.15)
+
+  // Create a clipping region for just the Steve image area
+  juce::Graphics::ScopedSaveState saveState(g);
+  g.reduceClipRegion(20, 20, 440, DESIGN_HEIGHT - 40);
+
+  // Draw the waveform in this clipped region
+  g.strokePath(wavePath,
+               juce::PathStrokeType(3.0f, juce::PathStrokeType::curved,
+                                    juce::PathStrokeType::rounded));
+
+  // === DRAW ALL LABELS WITH CUSTOM FONT (like min/max values) ===
+  // This works because we use g.setFont() directly in paint()
+  // IMPORTANT: Don't use juce::Font::bold or it will replace the custom
+  // typeface!
+  g.setColour(
+      juce::Colour::fromFloatRGBA(0.5f, 0.3f, 0.1f, 1.0f)); // Dark brown
+  g.setFont(customLookAndFeel.getCustomFont(22.0f)); // NO STYLE - just size!
+
+  // Same calculations as resized()
+  const int imageX = 20;
+  const int imageWidth = 440;
+  const int contentStartX = imageX + imageWidth + 30; // 490
+  const int contentStartY = 100;
+  const int contentWidth = 1300 - contentStartX - 30;
+  const int columnCount = 4;
+  const int columnSpacing = 50;
+  const int columnWidth =
+      (contentWidth - (columnCount - 1) * columnSpacing) / columnCount;
+  const int knobHeight = 140;
+  const int verticalSpacing = 45;
+  const int buttonHeight = 55;
+
+  const int col1X = contentStartX;
+  const int col2X = col1X + columnWidth + columnSpacing;
+  const int col3X = col2X + columnWidth + columnSpacing;
+  const int col4X = col3X + columnWidth + columnSpacing;
+
+  const int buttonRowY = contentStartY;
+  const int row1Y = contentStartY + 80;
+  const int row2Y = row1Y + knobHeight + verticalSpacing;
+  const int row3Y = row2Y + knobHeight + verticalSpacing;
+
+  const int labelHeight = 28;
+  const int labelMarginAbove = 5;
+  const int topBarY = 45;
+  const int navBtnWidth = 35;
+  const int navSpacing = 5;
+  const int comboWidth = 180;
+  const int presetStartX = 480;
+  const int waveStartX = 900;
+  const int knobWidth = columnWidth - 10;
+
+  const int footerY = 850 - 100;
+  const int footerButtonWidth = 180;
+  const int deltaKnobWidth = 110;
+
+  // Top bar labels
+  g.drawText("PRESETS", presetStartX, topBarY - labelHeight - 5,
+             navBtnWidth * 2 + comboWidth + navSpacing * 2, labelHeight,
+             juce::Justification::centred, true);
+  g.drawText("WAVE", waveStartX + navBtnWidth + navSpacing,
+             topBarY - labelHeight - 5, comboWidth, labelHeight,
+             juce::Justification::centred, true);
+
+  // Column 1: Input + Output
+  g.drawText("Input", col1X + 5, row2Y - labelHeight - labelMarginAbove,
+             knobWidth, labelHeight, juce::Justification::centred, true);
+  g.drawText("Output", col1X + 5, row3Y - labelHeight - labelMarginAbove,
+             knobWidth, labelHeight, juce::Justification::centred, true);
+
+  // Column 2: LOW band
+  g.drawText("Low Freq", col2X + 5, row1Y - labelHeight - labelMarginAbove,
+             knobWidth, labelHeight, juce::Justification::centred, true);
+  g.drawText("Low Warmth", col2X + 5, row2Y - labelHeight - labelMarginAbove,
+             knobWidth, labelHeight, juce::Justification::centred, true);
+  g.drawText("Low Level", col2X + 5, row3Y - labelHeight - labelMarginAbove,
+             knobWidth, labelHeight, juce::Justification::centred, true);
+
+  // Column 3: HIGH band
+  g.drawText("High Freq", col3X + 5, row1Y - labelHeight - labelMarginAbove,
+             knobWidth, labelHeight, juce::Justification::centred, true);
+  g.drawText("High Softness", col3X + 5, row2Y - labelHeight - labelMarginAbove,
+             knobWidth, labelHeight, juce::Justification::centred, true);
+  g.drawText("High Level", col3X + 5, row3Y - labelHeight - labelMarginAbove,
+             knobWidth, labelHeight, juce::Justification::centred, true);
+
+  // Column 4: MASTER
+  g.drawText("Saturation", col4X + 5, row1Y - labelHeight - labelMarginAbove,
+             knobWidth, labelHeight, juce::Justification::centred, true);
+  g.drawText("Shape", col4X + 5, row2Y - labelHeight - labelMarginAbove,
+             knobWidth, labelHeight, juce::Justification::centred, true);
+  g.drawText("Mix", col4X + 5, row3Y - labelHeight - labelMarginAbove,
+             knobWidth, labelHeight, juce::Justification::centred, true);
+
+  // Delta Gain label
+  const int footerTotalWidth =
+      footerButtonWidth * 4 + columnSpacing * 1.5 + deltaKnobWidth;
+  const int footerStartX = (DESIGN_WIDTH - footerTotalWidth) / 2;
+  g.drawText("Delta Gain",
+             footerStartX + (footerButtonWidth + columnSpacing / 3) * 4 + 10,
+             footerY - 10 - labelHeight - labelMarginAbove, deltaKnobWidth,
+             labelHeight, juce::Justification::centred, true);
 
   // Build info is now a HyperlinkButton (signatureLink)
 }

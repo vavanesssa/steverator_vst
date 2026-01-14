@@ -28,6 +28,17 @@ add_custom_target(copy_assets ALL
 )
 
 # -----------------------------------------------------------------------------
+# 📦 Binary Data (Embed assets directly into binary)
+# -----------------------------------------------------------------------------
+# Embed font and images directly into the binary for reliable loading
+juce_add_binary_data(Assets SOURCES
+    Assets/NanumPenScript-Regular.ttf
+    Assets/steve.png
+    Assets/steve2.png
+    Assets/indicator.png
+)
+
+# -----------------------------------------------------------------------------
 # 🎛️ Plugin Definition
 # -----------------------------------------------------------------------------
 # 'juce_add_plugin' is a helper function from JUCE.
@@ -74,6 +85,8 @@ target_sources(steverator
 # We link the necessary JUCE modules.
 target_link_libraries(steverator
     PRIVATE
+        # Binary data (embedded assets)
+        Assets
         # Base JUCE functionality (Strings, Files, etc.)
         juce::juce_core
         # Events and messaging
