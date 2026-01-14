@@ -13,6 +13,10 @@
 
 Visitez la [page des releases](../../releases) pour télécharger le plugin pour macOS ou Windows.
 
+<p align="center">
+  <img src="Assets/steve.png" alt="Steve the Fish" width="400">
+</p>
+
 ---
 
 <details>
