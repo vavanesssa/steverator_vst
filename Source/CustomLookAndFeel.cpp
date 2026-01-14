@@ -15,7 +15,35 @@
 
 #include "CustomLookAndFeel.h"
 
+#include "CustomLookAndFeel.h"
+
 CustomLookAndFeel::CustomLookAndFeel() {}
+
+void CustomLookAndFeel::ensureImageLoaded() {
+  if (indicatorImage.isNull()) {
+    juce::File imageFile;
+    auto appDir =
+        juce::File::getSpecialLocation(juce::File::currentApplicationFile);
+
+    // Try multiple paths similar to PluginEditor logic
+    juce::File path1 = appDir.getChildFile("Contents/Resources/indicator.png");
+    juce::File path2 =
+        appDir.getParentDirectory().getParentDirectory().getChildFile(
+            "Resources/indicator.png");
+    juce::File path3 = juce::File(
+        "/Users/vava/Documents/GitHub/vst_saturator/Assets/indicator.png");
+
+    if (path1.existsAsFile())
+      imageFile = path1;
+    else if (path2.existsAsFile())
+      imageFile = path2;
+    else if (path3.existsAsFile())
+      imageFile = path3;
+
+    if (imageFile.existsAsFile())
+      indicatorImage = juce::ImageFileFormat::loadFrom(imageFile);
+  }
+}
 
 void CustomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
                                          int width, int height,
@@ -27,10 +55,11 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
   bool isHovered = slider.isMouseOverOrDragging();
   bool isPressed = slider.isMouseButtonDown();
 
-  // Basic dimensions
-  float radius = juce::jmin(width, height) / 2.0f;
-  float centerX = x + width * 0.5f;
-  float centerY = y + height * 0.5f;
+  // Center and radius (Fixed size, no zoom)
+  float centerX = (float)x + (float)width / 2.0f;
+  float centerY = (float)y + (float)height / 2.0f;
+  float baseRadius = juce::jmin(width, height) / 2.0f - 2.0f;
+  float radius = baseRadius; // No zoom factor
 
   // Design Parameters
   const float trackWidth = 8.0f;
@@ -51,11 +80,28 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
   shadow.drawForPath(g, knobBackground);
 
   // === 2. KNOB BODY (Glassy/Modern Gradient) ===
-  juce::ColourGradient knobGradient(
-      juce::Colour::fromFloatRGBA(0.98f, 0.96f, 0.92f, 1.0f), centerX,
-      centerY - mainRadius,
-      juce::Colour::fromFloatRGBA(0.92f, 0.88f, 0.82f, 1.0f), centerX,
-      centerY + mainRadius, false);
+  // Hover effect: Warm soft orange glow
+  // Logic: Pressed -> Darker | Hover -> Lighter/Warmer | Default -> Standard
+  juce::Colour startCol;
+  juce::Colour endCol;
+
+  if (isPressed) {
+    // Much stronger visual feedback for pressed state
+    // Darker, reddish brown for pressed state to be very obvious
+    startCol = juce::Colour::fromFloatRGBA(0.85f, 0.75f, 0.65f, 1.0f);
+    endCol = juce::Colour::fromFloatRGBA(0.80f, 0.65f, 0.55f, 1.0f);
+  } else if (isHovered) {
+    startCol = juce::Colour::fromFloatRGBA(1.0f, 0.96f, 0.92f, 1.0f); // Lighter
+    endCol = juce::Colour::fromFloatRGBA(1.0f, 0.90f, 0.80f, 1.0f); // Peachtree
+  } else {
+    startCol =
+        juce::Colour::fromFloatRGBA(0.98f, 0.96f, 0.92f, 1.0f); // Standard
+    endCol = juce::Colour::fromFloatRGBA(0.92f, 0.88f, 0.82f, 1.0f);
+  }
+
+  juce::ColourGradient knobGradient(startCol, centerX, centerY - mainRadius,
+                                    endCol, centerX, centerY + mainRadius,
+                                    false);
 
   g.setGradientFill(knobGradient);
   g.fillEllipse(centerX - mainRadius, centerY - mainRadius, mainRadius * 2.0f,
@@ -96,28 +142,54 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
                juce::PathStrokeType(trackWidth, juce::PathStrokeType::curved,
                                     juce::PathStrokeType::rounded));
 
-  // === 5. INDICATOR DOT (3D Effect) ===
+  // === 5. INDICATOR DOT (Image) ===
+  ensureImageLoaded(); // Lazy load if needed
+
   float dotX =
       centerX + (mainRadius - trackWidth * 0.5f) *
                     std::cos(angle - juce::MathConstants<float>::pi / 2.0f);
   float dotY =
       centerY + (mainRadius - trackWidth * 0.5f) *
                     std::sin(angle - juce::MathConstants<float>::pi / 2.0f);
-  float dotSize = trackWidth * 1.8f; // Slightly larger than track
 
-  // Dot Shadow
-  g.setColour(juce::Colour::fromFloatRGBA(0.0f, 0.0f, 0.0f, 0.2f));
-  g.fillEllipse(dotX - dotSize * 0.5f, dotY - dotSize * 0.5f + 1.0f, dotSize,
-                dotSize);
+  if (!indicatorImage.isNull()) {
+    // Draw image ROTATED to match the knob angle
+    // 1. Save state
+    juce::Graphics::ScopedSaveState saveState(g);
 
-  // Dot Fill (Gold/Orange)
-  juce::ColourGradient dotGradient(
-      juce::Colour::fromFloatRGBA(1.0f, 0.8f, 0.2f, 1.0f),
-      dotX - dotSize * 0.5f, dotY - dotSize * 0.5f,
-      juce::Colour::fromFloatRGBA(0.9f, 0.5f, 0.0f, 1.0f),
-      dotX + dotSize * 0.5f, dotY + dotSize * 0.5f, false);
-  g.setGradientFill(dotGradient);
-  g.fillEllipse(dotX - dotSize * 0.5f, dotY - dotSize * 0.5f, dotSize, dotSize);
+    // 2. Translate to the dot position (center of the image)
+    g.addTransform(juce::AffineTransform::translation(dotX, dotY));
+
+    // 3. Rotate by the current angle
+    // We explicitly lock the rotation to the knob's angle so the fish "swims"
+    // around the circle
+    g.addTransform(juce::AffineTransform::rotation(angle));
+
+    // 4. Draw image centered at (0,0) in this new coordinate system
+    float imgSize = 25.0f;
+    // Note: We might need to adjust rotation offset if the source image isn't
+    // facing "up". Assuming source is upright at 12 o'clock.
+    g.drawImage(indicatorImage, -imgSize / 2, -imgSize / 2, imgSize, imgSize, 0,
+                0, indicatorImage.getWidth(), indicatorImage.getHeight());
+  } else {
+    // Fallback to Code Drawing if image missing
+    float dotSize = trackWidth * 1.8f;
+
+    // Dot Shadow
+    g.setColour(juce::Colour::fromFloatRGBA(0.0f, 0.0f, 0.0f, 0.2f));
+    g.fillEllipse(dotX - dotSize * 0.5f, dotY - dotSize * 0.5f + 1.0f, dotSize,
+                  dotSize);
+
+    // Dot Fill (Gold/Orange)
+    juce::ColourGradient dotGradient(
+        juce::Colour::fromFloatRGBA(1.0f, 0.8f, 0.2f, 1.0f),
+        dotX - dotSize * 0.5f, dotY - dotSize * 0.5f,
+        juce::Colour::fromFloatRGBA(0.9f, 0.5f, 0.0f, 1.0f),
+        dotX + dotSize * 0.5f, dotY + dotSize * 0.5f, false);
+    g.setGradientFill(dotGradient);
+    g.fillEllipse(dotX - dotSize * 0.5f, dotY - dotSize * 0.5f, dotSize,
+                  dotSize);
+  }
 
   // === 6. MIN / MAX TEXT (Small, light orange) ===
   g.setColour(juce::Colour::fromFloatRGBA(0.8f, 0.5f, 0.2f, 0.7f));
@@ -174,9 +246,51 @@ CustomLookAndFeel::getSliderLayout(juce::Slider &slider) {
   return layout;
 }
 
+// Helper class for hover and click effects on labels
+class HoverLabel : public juce::Label {
+public:
+  HoverLabel() : juce::Label() {}
+
+  void mouseEnter(const juce::MouseEvent &e) override {
+    juce::Label::mouseEnter(e);
+    updateColour(true, false);
+  }
+
+  void mouseExit(const juce::MouseEvent &e) override {
+    juce::Label::mouseExit(e);
+    updateColour(false, false);
+  }
+
+  void mouseDown(const juce::MouseEvent &e) override {
+    juce::Label::mouseDown(e);
+    updateColour(true, true);
+  }
+
+  void mouseUp(const juce::MouseEvent &e) override {
+    juce::Label::mouseUp(e);
+    updateColour(isMouseOver(), false);
+  }
+
+private:
+  void updateColour(bool isHovered, bool isPressed) {
+    if (isPressed) {
+      // Stronger visual feedback: Darker pink/rose for click
+      setColour(juce::Label::backgroundColourId,
+                juce::Colour::fromFloatRGBA(0.9f, 0.50f, 0.60f, 0.8f));
+    } else if (isHovered) {
+      // Light pink background (Rose Clair)
+      setColour(juce::Label::backgroundColourId,
+                juce::Colour::fromFloatRGBA(1.0f, 0.75f, 0.85f, 0.5f));
+    } else {
+      setColour(juce::Label::backgroundColourId,
+                juce::Colours::transparentBlack);
+    }
+  }
+};
+
 // === CUSTOM TEXT BOX (Transparent, formatted) ===
 juce::Label *CustomLookAndFeel::createSliderTextBox(juce::Slider &slider) {
-  auto *l = new juce::Label();
+  auto *l = new HoverLabel();
 
   // Transparent background
   l->setColour(juce::Label::backgroundColourId,
@@ -320,4 +434,39 @@ void CustomLookAndFeel::drawTooltip(juce::Graphics &g, const juce::String &text,
   g.setColour(juce::Colour::fromFloatRGBA(0.2f, 0.1f, 0.0f, 1.0f));
   g.setFont(juce::Font(13.0f)); // Petit texte
   g.drawText(text, bounds.reduced(3), juce::Justification::centred, true);
+}
+
+// === CUSTOM TEXT BUTTON (Transparent background, Orange Bold Text) ===
+void CustomLookAndFeel::drawButtonBackground(
+    juce::Graphics &g, juce::Button &button,
+    const juce::Colour &backgroundColour, bool shouldDrawButtonAsHighlighted,
+    bool shouldDrawButtonAsDown) {
+  // No background, no border, purely transparent
+}
+
+void CustomLookAndFeel::drawButtonText(juce::Graphics &g,
+                                       juce::TextButton &button,
+                                       bool shouldDrawButtonAsHighlighted,
+                                       bool shouldDrawButtonAsDown) {
+  juce::Font font(22.0f, juce::Font::bold);
+  g.setFont(font);
+
+  // Orange color depending on state
+  // Normal: Orange
+  // Hover: Lighter Orange
+  // Down: Darker Orange
+  juce::Colour textCol;
+  if (shouldDrawButtonAsDown)
+    textCol = juce::Colour::fromFloatRGBA(0.8f, 0.4f, 0.0f, 1.0f); // Darker
+  else if (shouldDrawButtonAsHighlighted)
+    textCol = juce::Colour::fromFloatRGBA(1.0f, 0.7f, 0.2f, 1.0f); // Lighter
+  else
+    textCol =
+        juce::Colour::fromFloatRGBA(1.0f, 0.55f, 0.1f, 1.0f); // Standard Orange
+
+  g.setColour(textCol);
+
+  // Draw text centered
+  g.drawText(button.getButtonText(), button.getLocalBounds(),
+             juce::Justification::centred, false);
 }

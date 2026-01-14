@@ -37,54 +37,13 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
     buildHash = "DEV";
   }
 
-  // DEBUG: Write to a log file to see what paths are being checked
-  juce::File steveFile; // Declaration added
-  juce::File logFile("/Users/vava/Desktop/steverator_debug.txt");
-  logFile.replaceWithText("Debugging Image Loading...\n");
-  logFile.appendText("App File: " + appDir.getFullPathName() + "\n");
+  // Load Steve Images
+  steveImage = loadImage("steve.png");
+  steve2Image = loadImage("steve2.png");
 
-  // Path 1: Inside App Bundle (Standard macOS)
-  // If appDir is the .app bundle:
-  juce::File path1 = appDir.getChildFile("Contents/Resources/steve.png");
-  logFile.appendText("Path 1 (AppBundle): " + path1.getFullPathName() +
-                     " - Exists: " + (path1.existsAsFile() ? "YES" : "NO") +
-                     "\n");
-
-  // Path 2: Relative to Executable (Binary inside MacOS)
-  // If appDir is .../Contents/MacOS/Steverator
-  juce::File path2 =
-      appDir.getParentDirectory().getParentDirectory().getChildFile(
-          "Resources/steve.png");
-  logFile.appendText("Path 2 (BinaryRel): " + path2.getFullPathName() +
-                     " - Exists: " + (path2.existsAsFile() ? "YES" : "NO") +
-                     "\n");
-
-  // Path 3: Dev path fallback
-  juce::File path3 =
-      juce::File("/Users/vava/Documents/GitHub/vst_saturator/Assets/steve.png");
-  logFile.appendText("Path 3 (Hardcoded): " + path3.getFullPathName() +
-                     " - Exists: " + (path3.existsAsFile() ? "YES" : "NO") +
-                     "\n");
-
-  // Logic implementation
-  if (path1.existsAsFile())
-    steveFile = path1;
-  else if (path2.existsAsFile())
-    steveFile = path2;
-  else if (path3.existsAsFile())
-    steveFile = path3;
-
-  if (steveFile.existsAsFile()) {
-    steveImage = juce::ImageFileFormat::loadFrom(steveFile);
-    logFile.appendText("Selected Image: " + steveFile.getFullPathName() + "\n");
-    logFile.appendText(
-        "Image Valid: " +
-        juce::String(steveImage.isNull() ? "NO (Null Image)" : "YES") + "\n");
-    logFile.appendText(
-        "Image Dimensions: " + juce::String(steveImage.getWidth()) + "x" +
-        juce::String(steveImage.getHeight()) + "\n");
-  } else {
-    logFile.appendText("❌ FAILED TO FIND ANY IMAGE\n");
+  if (!steveImage.isNull()) {
+    // Log success if needed, or just relax.
+    // Already logging in helper if we kept it, but let's keep it simple.
   }
 
   // Helper lambda for configuring sliders
@@ -280,7 +239,7 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
       deltaGainSlider, "deltaGain",
       juce::CharPointer_UTF8(
           "Gain du signal Delta (réduction de niveau pour la sécurité audio)"));
-  configureLabel(deltaGainLabel, "Δ Gain");
+  configureLabel(deltaGainLabel, "Delta Gain");
   deltaGainLabel.attachToComponent(&deltaGainSlider, false);
   attachSlider(deltaGainAttachment, "deltaGain", deltaGainSlider);
 
@@ -344,8 +303,18 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   getConstrainer()->setFixedAspectRatio(static_cast<double>(DESIGN_WIDTH) /
                                         static_cast<double>(DESIGN_HEIGHT));
 
-  // Start a timer to update value labels
-  startTimer(100);
+  // Start a timer to update value labels and visualization
+  // 30 FPS ~ 33ms
+  startTimer(33);
+
+  // Configure Signature Link
+  signatureLink.setButtonText("by NeiXXa / Version : " + buildHash);
+  signatureLink.setURL(juce::URL("https://soundcloud.com/neixxatek"));
+  signatureLink.setColour(juce::HyperlinkButton::textColourId,
+                          juce::Colour::fromFloatRGBA(0.5f, 0.3f, 0.1f, 1.0f));
+  signatureLink.setFont(juce::Font(18.0f, juce::Font::bold), false,
+                        juce::Justification::bottomRight);
+  addAndMakeVisible(signatureLink);
 }
 
 Vst_saturatorAudioProcessorEditor::~Vst_saturatorAudioProcessorEditor() {}
@@ -380,23 +349,45 @@ void Vst_saturatorAudioProcessorEditor::paint(juce::Graphics &g) {
   g.setColour(juce::Colour::fromFloatRGBA(0.93f, 0.90f, 0.82f, 1.0f)); // Beige
   g.fillRect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
 
-  // Draw steve image on the left side if loaded - full height with proper
-  // aspect ratio
-  if (!steveImage.isNull()) {
+  // === BACKGROUND WAVEFORM VISUALIZATION ===
+  // Draw subtle waveform behind everything (but on top of beige)
+  // Low contrast orange/brown
+  g.setColour(juce::Colour::fromFloatRGBA(1.0f, 0.6f, 0.1f, 0.15f));
+
+  // Use a stroke for an oscilloscope look
+  g.strokePath(wavePath,
+               juce::PathStrokeType(3.0f, juce::PathStrokeType::curved,
+                                    juce::PathStrokeType::rounded));
+
+  // Optional: Fill below the curve for a more solid look
+  // g.setColour(juce::Colour::fromFloatRGBA(1.0f, 0.6f, 0.1f, 0.05f));
+  // juce::Path fillPath = wavePath;
+  // fillPath.lineTo(DESIGN_WIDTH, DESIGN_HEIGHT / 2); // Close properly based
+  // on logic but straight stroke is cleaner for "Saturn" style usually.
+
+  // Draw steve image on the left side - full height with proper aspect ratio
+  // Check if audio is playing (Threshold ~ -50dB)
+  float currentLevel =
+      audioProcessor.currentRMSLevel.load(std::memory_order_relaxed);
+  bool isTalking = currentLevel > 0.005f;
+
+  juce::Image *imgToDraw = &steveImage;
+
+  // If talking and we have the second image, swap!
+  if (isTalking && !steve2Image.isNull()) {
+    imgToDraw = &steve2Image;
+  }
+
+  if (imgToDraw != nullptr && !imgToDraw->isNull()) {
     juce::Rectangle<int> imageBounds(20, 20, 440, DESIGN_HEIGHT - 40);
-    g.drawImageWithin(steveImage, imageBounds.getX(), imageBounds.getY(),
+    // Draw at 100% opacity
+    g.setOpacity(1.0f);
+    g.drawImageWithin(*imgToDraw, imageBounds.getX(), imageBounds.getY(),
                       imageBounds.getWidth(), imageBounds.getHeight(),
                       juce::RectanglePlacement::centred, false);
   }
 
-  // Build info in bottom right corner with dark text (in design space)
-  g.setColour(juce::Colour::fromFloatRGBA(0.5f, 0.3f, 0.1f,
-                                          0.95f)); // Dark brown - more opaque
-  g.setFont(juce::Font(18.0f, juce::Font::bold));  // Larger, bold font
-  juce::String versionText = "by NeiXXa / Version : " + buildHash;
-  juce::Rectangle<int> versionBox(DESIGN_WIDTH - 350, DESIGN_HEIGHT - 32, 340,
-                                  26);
-  g.drawText(versionText, versionBox, juce::Justification::bottomRight, true);
+  // Build info is now a HyperlinkButton (signatureLink)
 }
 
 void Vst_saturatorAudioProcessorEditor::resized() {
@@ -473,7 +464,7 @@ void Vst_saturatorAudioProcessorEditor::resized() {
   // All coordinates are in design space (1300x850), transformed to window space
 
   // === TOP BAR: Presets (left) and Waveshape (right) ===
-  const int topBarY = 15;
+  const int topBarY = 45; // Moved down from 15 to 45 to avoid being cut off
   const int navBtnWidth = 35;
   const int navBtnHeight = 35;
   const int comboWidth = 180;
@@ -537,7 +528,7 @@ void Vst_saturatorAudioProcessorEditor::resized() {
 
   // === FOOTER BUTTONS (centered with delta) ===
   // Layout: [Bypass] [Limiter] [Pre/Post] [DELTA] [Δ Gain knob]
-  const int deltaKnobWidth = 80; // Smaller knob for delta gain
+  const int deltaKnobWidth = 110; // Slightly larger for "Delta Gain" text
   const int deltaKnobHeight = 80;
   const int footerTotalWidth =
       footerButtonWidth * 4 + columnSpacing * 1.5 + deltaKnobWidth;
@@ -555,17 +546,86 @@ void Vst_saturatorAudioProcessorEditor::resized() {
       footerStartX + (footerButtonWidth + columnSpacing / 3) * 3, footerY,
       footerButtonWidth, footerButtonHeight));
 
-  // Delta Gain knob (small, positioned after Delta button)
   deltaGainSlider.setBounds(scaleDesignBounds(
       footerStartX + (footerButtonWidth + columnSpacing / 3) * 4 + 10,
       footerY - 10, // Slightly higher to account for label
       deltaKnobWidth, deltaKnobHeight));
 
+  // Footer signature link
+  signatureLink.setBounds(
+      scaleDesignBounds(DESIGN_WIDTH - 350, DESIGN_HEIGHT - 32, 340, 26));
+
   repaint();
 }
 
 void Vst_saturatorAudioProcessorEditor::timerCallback() {
-  // Timer is used to trigger repaints to show updated knob values
+  // 1. Read Visualization Data
+  // We recreate the path every frame.
+
+  // Copy data from processor's circular buffer
+  // We just take a snapshot of the buffer as is.
+  // Ideally we would trigger/sync, but for background decoration, scrolling is
+  // fine.
+
+  // Resize local buffer if needed
+  if (localWaveform.size() != Vst_saturatorAudioProcessor::visualizerBufferSize)
+    localWaveform.resize(Vst_saturatorAudioProcessor::visualizerBufferSize);
+
+  // Read blindly from the buffer (atomic read of index isn't strictly necessary
+  // for a blurry background view, but let's try to get a contiguous block logic
+  // if we want) The simplest way for a circular buffer visualizer is just to
+  // map the whole buffer to the screen width. It will "scroll" if the write
+  // pointer moves, which is what we want for an oscilloscope feel (or trigger).
+  // WITHOUT trigger, it will just be a mess usually.
+  // Simple "Trigger" logic: Find a zero crossing in the first 1/4 of buffer?
+  // Actually, for "Saturn style" background, a slow rolling wave is pretty.
+  // Let's just map the circular buffer starting from the current write index
+  // (oldest data).
+
+  int writeIndex =
+      audioProcessor.visualizerWriteIndex.load(std::memory_order_relaxed);
+
+  // Unroll the circular buffer into our local linear buffer
+  for (int i = 0; i < Vst_saturatorAudioProcessor::visualizerBufferSize; ++i) {
+    int index =
+        (writeIndex + i) % Vst_saturatorAudioProcessor::visualizerBufferSize;
+    localWaveform[(size_t)i] = audioProcessor.visualizerBuffer[(size_t)index];
+  }
+
+  // 2. Build Path
+  wavePath.clear();
+
+  // Map 512 samples to DESIGN_WIDTH (1300px)
+  // Center Y is DESIGN_HEIGHT / 2 (~425)
+  // Height amplitude: +/- 150px
+
+  float startX = 0.0f;
+  float endX = (float)DESIGN_WIDTH;
+  float centerY = (float)DESIGN_HEIGHT * 0.5f;
+  float amplitudeScale = 200.0f;
+
+  // We skip some samples to smoothen or just draw all points
+  int numSamples = (int)localWaveform.size();
+  float xStep = (endX - startX) / (float)(numSamples - 1);
+
+  wavePath.startNewSubPath(startX, centerY - localWaveform[0] * amplitudeScale);
+
+  for (int i = 1; i < numSamples; ++i) {
+    float val = localWaveform[(size_t)i];
+    // Soft saturation on the visualization itself to keep it in bounds
+    // val = std::tanh(val);
+
+    float x = startX + (float)i * xStep;
+    float y = centerY - val * amplitudeScale;
+
+    // Simple lineTo is efficient enough for 512 points
+    wavePath.lineTo(x, y);
+
+    // For smoother look, we could use quadraticTo/cubicTo reducing point count,
+    // but 512 lines is fast.
+  }
+
+  // Timer is used to trigger repaints
   repaint();
 }
 
@@ -763,4 +823,36 @@ void Vst_saturatorAudioProcessorEditor::navigateWaveshape(int direction) {
 
   // Update combo (this triggers onChange which updates the parameter)
   waveshapeCombo.setSelectedItemIndex(currentWave, juce::sendNotification);
+}
+
+//==============================================================================
+juce::Image
+Vst_saturatorAudioProcessorEditor::loadImage(const juce::String &imageName) {
+  juce::File imageFile;
+  auto appDir =
+      juce::File::getSpecialLocation(juce::File::currentApplicationFile);
+
+  // Path 1: Inside App Bundle (Standard macOS)
+  juce::File path1 = appDir.getChildFile("Contents/Resources/" + imageName);
+
+  // Path 2: Relative to Executable (Binary inside MacOS)
+  juce::File path2 =
+      appDir.getParentDirectory().getParentDirectory().getChildFile(
+          "Resources/" + imageName);
+
+  // Path 3: Dev path fallback
+  juce::File path3 = juce::File(
+      "/Users/vava/Documents/GitHub/vst_saturator/Assets/" + imageName);
+
+  if (path1.existsAsFile())
+    imageFile = path1;
+  else if (path2.existsAsFile())
+    imageFile = path2;
+  else if (path3.existsAsFile())
+    imageFile = path3;
+
+  if (imageFile.existsAsFile())
+    return juce::ImageFileFormat::loadFrom(imageFile);
+
+  return juce::Image(); // Null image
 }

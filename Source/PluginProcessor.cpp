@@ -653,6 +653,39 @@ void Vst_saturatorAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     juce::dsp::AudioBlock<float> block(buffer);
     limiter.process(juce::dsp::ProcessContextReplacing<float>(block));
   }
+
+  // === WRITE TO VISUALIZER BUFFER ===
+  // Sum to mono and write to circular buffer
+  // We only need ~512 samples for a frame. To avoid writing too fast (since
+  // audio is 44.1k+) we can just write every Nth sample or just write
+  // everything and let the GUI catch what it sees. Writing everything is
+  // smoother for the waveform.
+  const int numSamples = buffer.getNumSamples();
+  const int numChannels = buffer.getNumChannels();
+
+  if (numChannels > 0) {
+    const float *readPtr = buffer.getReadPointer(0); // Left channel or mono
+
+    for (int i = 0; i < numSamples; ++i) {
+      int idx = visualizerWriteIndex.load(std::memory_order_relaxed);
+      visualizerBuffer[static_cast<size_t>(idx)] = readPtr[i];
+      visualizerWriteIndex.store((idx + 1) % visualizerBufferSize,
+                                 std::memory_order_relaxed);
+    }
+  }
+
+  // === ENVELOPE FOLLOWER UPDATE ===
+  // Calculate max peak of the output block to drive UI
+  float maxPeak = 0.0f;
+  for (int channel = 0; channel < totalNumOutputChannels; ++channel) {
+    maxPeak = juce::jmax(
+        maxPeak, buffer.getMagnitude(channel, 0, buffer.getNumSamples()));
+  }
+
+  // Simple smoothing/decay could be done here, or just push peak to UI
+  // Pushing current peak is fine for "Is Talking" logic
+  // We use atomic store
+  currentRMSLevel.store(maxPeak, std::memory_order_relaxed);
 }
 
 //==============================================================================

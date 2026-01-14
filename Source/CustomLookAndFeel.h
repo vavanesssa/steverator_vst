@@ -21,16 +21,19 @@ public:
   CustomLookAndFeel();
   ~CustomLookAndFeel() override = default;
 
+  // Ensure image is loaded
+  void ensureImageLoaded();
+
   // Draw the rotary slider (knob) with minimal design
   void drawRotarySlider(juce::Graphics &g, int x, int y, int width, int height,
                         float sliderPosProportional, float rotaryStartAngle,
                         float rotaryEndAngle, juce::Slider &slider) override;
 
   // Custom Slider Layout to center the text box
-  juce::Slider::SliderLayout getSliderLayout(juce::Slider& slider) override;
+  juce::Slider::SliderLayout getSliderLayout(juce::Slider &slider) override;
 
   // Custom Slider Text Box creation
-  juce::Label* createSliderTextBox(juce::Slider& slider) override;
+  juce::Label *createSliderTextBox(juce::Slider &slider) override;
 
   // Custom hit test for larger hover area
   bool hitTestRotarySlider(juce::Slider &slider, int x, int y);
@@ -54,6 +57,17 @@ public:
   void drawTooltip(juce::Graphics &g, const juce::String &text, int width,
                    int height) override;
 
+  // Custom styling for TextButtons (Nav arrows)
+  void drawButtonBackground(juce::Graphics &g, juce::Button &button,
+                            const juce::Colour &backgroundColour,
+                            bool shouldDrawButtonAsHighlighted,
+                            bool shouldDrawButtonAsDown) override;
+
+  void drawButtonText(juce::Graphics &g, juce::TextButton &button,
+                      bool shouldDrawButtonAsHighlighted,
+                      bool shouldDrawButtonAsDown) override;
+
 private:
+  juce::Image indicatorImage;
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(CustomLookAndFeel)
 };

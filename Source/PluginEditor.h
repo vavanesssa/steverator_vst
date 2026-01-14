@@ -160,6 +160,10 @@ private:
 
   // Steve image for left side display
   juce::Image steveImage;
+  juce::Image steve2Image;
+
+  // Helper to load images robustly
+  juce::Image loadImage(const juce::String &imageName);
 
   // Build hash for display
   juce::String buildHash;
@@ -168,8 +172,15 @@ private:
   juce::Rectangle<int> scaleDesignBounds(int x, int y, int width,
                                          int height) const;
 
+  // Waveform visualization
+  juce::Path wavePath;
+  std::vector<float> localWaveform;
+
   // Tooltip window
   juce::TooltipWindow tooltipWindow;
+
+  // Signature Link (Hyperlink)
+  juce::HyperlinkButton signatureLink;
 
   JUCE_DECLARE_NON_COPYABLE_WITH_LEAK_DETECTOR(
       Vst_saturatorAudioProcessorEditor)
