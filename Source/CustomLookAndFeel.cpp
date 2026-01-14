@@ -23,14 +23,33 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
                                          float rotaryStartAngle,
                                          float rotaryEndAngle,
                                          juce::Slider &slider) {
+  // Check for hover and click states
+  bool isHovered = slider.isMouseOver();
+  bool isPressed = slider.isMouseButtonDown();
+
   // Calculate the angle based on slider position
   float angle = rotaryStartAngle +
                 (sliderPosProportional * (rotaryEndAngle - rotaryStartAngle));
 
-  // Center and radius
+  // Center and radius with zoom effect when pressed
+  float zoomFactor = isPressed ? 1.05f : 1.0f; // 5% zoom when clicked
   float centerX = (float)x + (float)width / 2.0f;
   float centerY = (float)y + (float)height / 2.0f;
-  float radius = juce::jmin(width, height) / 2.0f - 2.0f;
+  float baseRadius = juce::jmin(width, height) / 2.0f - 2.0f;
+  float radius = baseRadius * zoomFactor;
+
+  // === HOVER GLOW BACKGROUND ===
+  if (isHovered || isPressed) {
+    // Light orange glow behind the knob (more intense when pressed)
+    float glowAlpha = isPressed ? 0.35f : 0.2f;
+    juce::ColourGradient hoverGlow(
+        juce::Colour::fromFloatRGBA(1.0f, 0.6f, 0.2f, glowAlpha), centerX,
+        centerY, juce::Colour::fromFloatRGBA(1.0f, 0.6f, 0.2f, 0.0f),
+        centerX - radius * 1.4f, centerY, true);
+    g.setGradientFill(hoverGlow);
+    g.fillEllipse(centerX - radius * 1.3f, centerY - radius * 1.3f,
+                  radius * 2.6f, radius * 2.6f);
+  }
 
   // === OUTER RING ===
   g.setColour(juce::Colour::fromFloatRGBA(0.6f, 0.35f, 0.1f,
@@ -46,20 +65,28 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
       juce::Colour::fromFloatRGBA(0.85f, 0.75f, 0.55f, 0.5f)); // Light beige
   g.strokePath(backgroundArc, juce::PathStrokeType(3.5f));
 
-  // === VALUE ARC (solid dark orange) ===
+  // === VALUE ARC (solid dark orange, brighter when hovered) ===
   juce::Path valueArc;
   valueArc.addCentredArc(centerX, centerY, radius * 0.85f, radius * 0.85f, 0.0f,
                          rotaryStartAngle, angle, true);
 
-  // Solid dark orange color (RGB 204, 102, 0)
+  // Arc color: brighter when hovered/pressed
   juce::Colour arcColour =
-      juce::Colour::fromFloatRGBA(0.8f, 0.4f, 0.0f, 1.0f); // Dark orange
+      isHovered ? juce::Colour::fromFloatRGBA(
+                      1.0f, 0.5f, 0.0f, 1.0f) // Bright orange when hovered
+                : juce::Colour::fromFloatRGBA(0.8f, 0.4f, 0.0f,
+                                              1.0f); // Normal dark orange
   g.setColour(arcColour);
   g.strokePath(valueArc, juce::PathStrokeType(4.5f));
 
   // === CENTER CIRCLE ===
-  g.setColour(juce::Colour::fromFloatRGBA(0.93f, 0.90f, 0.82f,
-                                          1.0f)); // Beige background
+  // Slightly tinted when hovered
+  juce::Colour centerColour =
+      isHovered ? juce::Colour::fromFloatRGBA(1.0f, 0.95f, 0.88f,
+                                              1.0f) // Warmer beige on hover
+                : juce::Colour::fromFloatRGBA(0.93f, 0.90f, 0.82f,
+                                              1.0f); // Normal beige
+  g.setColour(centerColour);
   g.fillEllipse(centerX - radius * 0.5f, centerY - radius * 0.5f, radius,
                 radius);
 
@@ -73,7 +100,8 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
       dotDistance * std::sin(angle - juce::MathConstants<float>::pi / 2.0f);
 
   g.setColour(arcColour);
-  g.fillEllipse(dotX - 4.0f, dotY - 4.0f, 8.0f, 8.0f);
+  float dotSize = isPressed ? 9.0f : 8.0f; // Slightly larger dot when pressed
+  g.fillEllipse(dotX - dotSize / 2.0f, dotY - dotSize / 2.0f, dotSize, dotSize);
 
   // === OUTER HIGHLIGHT (subtle) ===
   g.setColour(juce::Colour::fromFloatRGBA(1.0f, 0.95f, 0.85f, 0.4f));
@@ -88,10 +116,11 @@ void CustomLookAndFeel::drawRotarySlider(juce::Graphics &g, int x, int y,
   // Draw the text centered in the knob
   g.setColour(juce::Colour::fromFloatRGBA(0.6f, 0.35f, 0.1f,
                                           1.0f)); // Dark orange-brown
-  g.setFont(juce::Font(14.0f, juce::Font::bold));
+  g.setFont(juce::Font(14.0f * zoomFactor, juce::Font::bold));
 
-  juce::Rectangle<float> textBox(centerX - radius * 0.4f, centerY - 8.0f,
-                                 radius * 0.8f, 16.0f);
+  juce::Rectangle<float> textBox(centerX - radius * 0.4f,
+                                 centerY - 8.0f * zoomFactor, radius * 0.8f,
+                                 16.0f * zoomFactor);
   g.drawText(valueText, textBox.toNearestInt(), juce::Justification::centred,
              false);
 }

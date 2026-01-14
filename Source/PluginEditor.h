@@ -118,9 +118,15 @@ private:
   std::unique_ptr<juce::AudioProcessorValueTreeState::SliderAttachment>
       deltaGainAttachment;
 
-  // F. Presets Menu
+  // F. Presets Menu with navigation
   juce::ComboBox presetsCombo;
-  juce::Label presetsLabel;
+  juce::TextButton presetLeftBtn{"<"};
+  juce::TextButton presetRightBtn{">"};
+  int currentPresetIndex = 0; // Track current preset for arrow navigation
+
+  // G. Waveshape navigation (arrows for the existing waveshapeCombo)
+  juce::TextButton waveLeftBtn{"<"};
+  juce::TextButton waveRightBtn{">"};
 
   // Preset data structure
   struct PresetData {
@@ -146,6 +152,8 @@ private:
   std::vector<PresetData> presets;
   void initializePresets();
   void applyPreset(int presetIndex);
+  void navigatePreset(int direction);    // -1 for prev, +1 for next
+  void navigateWaveshape(int direction); // -1 for prev, +1 for next
 
   // Custom UI styling
   CustomLookAndFeel customLookAndFeel;

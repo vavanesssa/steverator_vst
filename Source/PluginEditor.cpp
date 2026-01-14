@@ -283,27 +283,53 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   deltaGainLabel.attachToComponent(&deltaGainSlider, false);
   attachSlider(deltaGainAttachment, "deltaGain", deltaGainSlider);
 
-  // F. Presets Menu (Top-Left)
+  // F. Presets Menu (Top bar with navigation arrows)
   initializePresets(); // Load all 30 presets
 
-  presetsCombo.addItem("-- Presets --", 1000); // Placeholder item
+  // Populate presets combo
   for (int i = 0; i < static_cast<int>(presets.size()); ++i) {
     presetsCombo.addItem(presets[static_cast<size_t>(i)].name, i + 1);
   }
   presetsCombo.setSelectedId(
-      1000, juce::dontSendNotification); // Default to placeholder
+      1, juce::dontSendNotification); // Start with first preset
+  currentPresetIndex = 0;
   presetsCombo.setLookAndFeel(&customLookAndFeel);
   presetsCombo.setTooltip(juce::CharPointer_UTF8(
       "Sélectionnez un preset pour charger des réglages prédéfinis"));
   presetsCombo.onChange = [this]() {
     int selectedId = presetsCombo.getSelectedId();
-    if (selectedId != 1000 && selectedId > 0) {
-      applyPreset(selectedId - 1);
-      // Reset to placeholder after applying
-      presetsCombo.setSelectedId(1000, juce::dontSendNotification);
+    if (selectedId > 0) {
+      currentPresetIndex = selectedId - 1;
+      applyPreset(currentPresetIndex);
     }
   };
   addAndMakeVisible(presetsCombo);
+
+  // Preset navigation buttons (arrows)
+  auto configureNavButton = [&](juce::TextButton &btn,
+                                const juce::String &tooltip) {
+    btn.setLookAndFeel(&customLookAndFeel);
+    btn.setTooltip(tooltip);
+    btn.setColour(
+        juce::TextButton::buttonColourId,
+        juce::Colour::fromFloatRGBA(1.0f, 0.5f, 0.1f, 1.0f)); // Orange
+    btn.setColour(
+        juce::TextButton::textColourOffId,
+        juce::Colour::fromFloatRGBA(1.0f, 1.0f, 1.0f, 1.0f)); // White text
+    addAndMakeVisible(btn);
+  };
+
+  configureNavButton(presetLeftBtn, juce::CharPointer_UTF8("Preset précédent"));
+  configureNavButton(presetRightBtn, juce::CharPointer_UTF8("Preset suivant"));
+  presetLeftBtn.onClick = [this]() { navigatePreset(-1); };
+  presetRightBtn.onClick = [this]() { navigatePreset(1); };
+
+  // G. Waveshape navigation buttons
+  configureNavButton(waveLeftBtn,
+                     juce::CharPointer_UTF8("Waveform précédente"));
+  configureNavButton(waveRightBtn, juce::CharPointer_UTF8("Waveform suivante"));
+  waveLeftBtn.onClick = [this]() { navigateWaveshape(-1); };
+  waveRightBtn.onClick = [this]() { navigateWaveshape(1); };
 
   // Set initial size to design size
   // Enable resizing with constraints (min 650x425 = 50% of design, max
@@ -445,8 +471,34 @@ void Vst_saturatorAudioProcessorEditor::resized() {
   // === APPLY SCALED BOUNDS TO ALL COMPONENTS ===
   // All coordinates are in design space (1300x850), transformed to window space
 
-  // PRESETS MENU (Top-Left corner, above Steve image)
-  presetsCombo.setBounds(scaleDesignBounds(20, 20, 220, 40));
+  // === TOP BAR: Presets (left) and Waveshape (right) ===
+  const int topBarY = 15;
+  const int navBtnWidth = 35;
+  const int navBtnHeight = 35;
+  const int comboWidth = 180;
+  const int comboHeight = 35;
+  const int navSpacing = 5;
+
+  // PRESETS section (left side of top bar, after Steve image area)
+  const int presetStartX = 480;
+  presetLeftBtn.setBounds(
+      scaleDesignBounds(presetStartX, topBarY, navBtnWidth, navBtnHeight));
+  presetsCombo.setBounds(
+      scaleDesignBounds(presetStartX + navBtnWidth + navSpacing, topBarY,
+                        comboWidth, comboHeight));
+  presetRightBtn.setBounds(scaleDesignBounds(
+      presetStartX + navBtnWidth + navSpacing + comboWidth + navSpacing,
+      topBarY, navBtnWidth, navBtnHeight));
+
+  // WAVESHAPE section (right side of top bar)
+  const int waveStartX = 900;
+  waveLeftBtn.setBounds(
+      scaleDesignBounds(waveStartX, topBarY, navBtnWidth, navBtnHeight));
+  waveshapeCombo.setBounds(scaleDesignBounds(
+      waveStartX + navBtnWidth + navSpacing, topBarY, comboWidth, comboHeight));
+  waveRightBtn.setBounds(scaleDesignBounds(
+      waveStartX + navBtnWidth + navSpacing + comboWidth + navSpacing, topBarY,
+      navBtnWidth, navBtnHeight));
 
   // COLUMN 1: INPUT + OUTPUT
   inputGainSlider.setBounds(
@@ -474,9 +526,7 @@ void Vst_saturatorAudioProcessorEditor::resized() {
   highLevelSlider.setBounds(
       scaleDesignBounds(col3X + 5, row3Y, knobWidth, knobHeight));
 
-  // COLUMN 4: MASTER (Waveshape selector + 3 knobs - Output moved to column 1)
-  waveshapeCombo.setBounds(
-      scaleDesignBounds(col4X, buttonRowY + 10, columnWidth, 40));
+  // COLUMN 4: MASTER (3 knobs - Waveshape moved to top bar)
   saturationSlider.setBounds(
       scaleDesignBounds(col4X + 5, row1Y, knobWidth, knobHeight));
   shapeSlider.setBounds(
@@ -677,4 +727,39 @@ void Vst_saturatorAudioProcessorEditor::applyPreset(int presetIndex) {
     param->setValueNotifyingHost(p.limiter ? 1.0f : 0.0f);
   if (auto *param = apvts.getParameter("prePost"))
     param->setValueNotifyingHost(p.prePost ? 1.0f : 0.0f);
+}
+
+void Vst_saturatorAudioProcessorEditor::navigatePreset(int direction) {
+  int numPresets = static_cast<int>(presets.size());
+  if (numPresets == 0)
+    return;
+
+  // Calculate new index with wrap-around
+  currentPresetIndex += direction;
+  if (currentPresetIndex < 0)
+    currentPresetIndex = numPresets - 1;
+  else if (currentPresetIndex >= numPresets)
+    currentPresetIndex = 0;
+
+  // Update combo and apply preset
+  presetsCombo.setSelectedId(currentPresetIndex + 1,
+                             juce::dontSendNotification);
+  applyPreset(currentPresetIndex);
+}
+
+void Vst_saturatorAudioProcessorEditor::navigateWaveshape(int direction) {
+  int currentWave = waveshapeCombo.getSelectedItemIndex();
+  int numWaves = waveshapeCombo.getNumItems();
+  if (numWaves == 0)
+    return;
+
+  // Calculate new index with wrap-around
+  currentWave += direction;
+  if (currentWave < 0)
+    currentWave = numWaves - 1;
+  else if (currentWave >= numWaves)
+    currentWave = 0;
+
+  // Update combo (this triggers onChange which updates the parameter)
+  waveshapeCombo.setSelectedItemIndex(currentWave, juce::sendNotification);
 }

@@ -474,46 +474,127 @@ void Vst_saturatorAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     }
   };
 
+  // Lambda to apply selected waveshape to a single sample
+  auto applyWaveshape = [&](float x, int waveshape, float shapeParam) -> float {
+    float output = x;
+    switch (waveshape) {
+    case 0: // Tube
+    {
+      float soft = std::tanh(x * (1.0f - shapeParam * 0.5f));
+      float hard = (x - x * x * x / 3.0f);
+      output = soft * (1.0f - shapeParam) + hard * shapeParam;
+      break;
+    }
+    case 1: // SoftClip
+      output = std::tanh(x * (1.0f + shapeParam * 2.0f));
+      break;
+    case 2: // HardClip
+      output = juce::jlimit(-1.0f, 1.0f, x * (1.0f + shapeParam * 3.0f));
+      break;
+    case 3: // Diode 1
+      output = x > 0.0f ? std::tanh(x * (1.0f + shapeParam)) : x * 0.5f;
+      break;
+    case 4: // Diode 2
+      output = x > 0.0f ? x * 0.7f : std::tanh(x * (1.0f + shapeParam * 2.0f));
+      break;
+    case 5: // Linear Fold
+    {
+      float threshold = 1.0f - shapeParam * 0.5f;
+      if (std::abs(x) > threshold)
+        output = threshold - (std::abs(x) - threshold);
+      else
+        output = x;
+      output = juce::jlimit(-1.0f, 1.0f, output);
+      break;
+    }
+    case 6: // Sin Fold
+      output = std::sin(x * juce::MathConstants<float>::pi *
+                        (1.0f + shapeParam * 2.0f));
+      break;
+    case 7: // Zero-Square
+      output = x * x * (x > 0.0f ? 1.0f : -1.0f) * (1.0f + shapeParam);
+      break;
+    case 8: // Downsample (simplified for oversampling context)
+      output = std::tanh(x * (1.0f + shapeParam));
+      break;
+    case 9: // Asym
+      output = x > 0.0f ? std::tanh(x * (1.0f + shapeParam * 2.0f)) : x * 0.3f;
+      break;
+    case 10: // Rectify
+      output = std::abs(x) * (1.0f - shapeParam * 0.5f);
+      break;
+    case 11: // X-Shaper
+      output = x * (1.0f + shapeParam) / (1.0f + shapeParam * std::abs(x));
+      break;
+    case 12: // X-Shaper (Asym)
+      output = x > 0.0f ? x * (1.0f + shapeParam * 2.0f) /
+                              (1.0f + shapeParam * std::abs(x))
+                        : x * 0.5f;
+      break;
+    case 13: // Sine Shaper
+      output = std::sin(std::tanh(x) * juce::MathConstants<float>::pi * 0.5f *
+                        (1.0f + shapeParam));
+      break;
+    case 14: // Stomp Box
+      output = std::atan(x * (1.0f + shapeParam * 5.0f)) /
+               juce::MathConstants<float>::pi;
+      break;
+    case 15: // Tape Sat.
+    {
+      float wet = std::tanh(x * 1.5f);
+      output = x * (1.0f - shapeParam) + wet * shapeParam;
+      break;
+    }
+    case 16: // Overdrive
+      output = (2.0f / juce::MathConstants<float>::pi) *
+               std::atan(x * (1.0f + shapeParam * 10.0f));
+      break;
+    case 17: // Soft Sat.
+      output = x / (1.0f + std::abs(x) * shapeParam);
+      break;
+    default:
+      output = std::tanh(x);
+      break;
+    }
+    return output;
+  };
+
   if (prePost) // Post: EQ -> Saturation
   {
     // 1. Process bands first
     processBands(buffer);
 
-    // 2. Then apply oversampled saturation
+    // 2. Then apply oversampled saturation with selected waveshape
     juce::dsp::AudioBlock<float> block(buffer);
     juce::dsp::AudioBlock<float> oversampledBlock =
         oversampling.processSamplesUp(block);
-    // Apply saturation directly to the oversampled block
+
+    float drive = juce::Decibels::decibelsToGain(saturation);
     for (int channel = 0; channel < (int)oversampledBlock.getNumChannels();
          ++channel) {
       auto *channelData = oversampledBlock.getChannelPointer(channel);
       for (size_t sample = 0; sample < oversampledBlock.getNumSamples();
            ++sample) {
-        float x =
-            channelData[sample] * juce::Decibels::decibelsToGain(saturation);
-        float soft = std::tanh(x * (1.0f - shape * 0.5f));
-        float hard = (x - x * x * x / 3.0f);
-        channelData[sample] = soft * (1.0f - shape) + hard * shape;
+        float x = channelData[sample] * drive;
+        channelData[sample] = applyWaveshape(x, waveshapeIndex, shape);
       }
     }
     oversampling.processSamplesDown(block);
   } else // Pre: Saturation -> EQ
   {
-    // 1. Apply oversampled saturation first
+    // 1. Apply oversampled saturation first with selected waveshape
     juce::dsp::AudioBlock<float> block(buffer);
     juce::dsp::AudioBlock<float> oversampledBlock =
         oversampling.processSamplesUp(block);
-    // Apply saturation directly to the oversampled block
+
+    float drive = juce::Decibels::decibelsToGain(saturation);
     for (int channel = 0; channel < (int)oversampledBlock.getNumChannels();
          ++channel) {
       auto *channelData = oversampledBlock.getChannelPointer(channel);
       for (size_t sample = 0; sample < oversampledBlock.getNumSamples();
            ++sample) {
-        float x =
-            channelData[sample] * juce::Decibels::decibelsToGain(saturation);
-        float soft = std::tanh(x * (1.0f - shape * 0.5f));
-        float hard = (x - x * x * x / 3.0f);
-        channelData[sample] = soft * (1.0f - shape) + hard * shape;
+        float x = channelData[sample] * drive;
+        channelData[sample] = applyWaveshape(x, waveshapeIndex, shape);
       }
     }
     oversampling.processSamplesDown(block);
