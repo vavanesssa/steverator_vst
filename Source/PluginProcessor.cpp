@@ -174,7 +174,7 @@ Vst_saturatorAudioProcessor::createParameterLayout() {
   layout.add(
       std::make_unique<juce::AudioParameterBool>("prePost", "Pre/Post", false));
   layout.add(
-      std::make_unique<juce::AudioParameterBool>("limiter", "Limiter", true));
+      std::make_unique<juce::AudioParameterBool>("limiter", "Limiter", false));
   layout.add(
       std::make_unique<juce::AudioParameterBool>("bypass", "Bypass", false));
 
