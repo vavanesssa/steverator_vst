@@ -77,6 +77,10 @@ target_sources(steverator
         Source/PluginEditor.h
         Source/CustomLookAndFeel.cpp
         Source/CustomLookAndFeel.h
+        Source/VisualizerAnalysis.cpp
+        Source/VisualizerAnalysis.h
+        Source/VisualizerComponents.cpp
+        Source/VisualizerComponents.h
 )
 
 # -----------------------------------------------------------------------------

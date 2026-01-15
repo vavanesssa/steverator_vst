@@ -56,6 +56,7 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
     Vst_saturatorAudioProcessor &p)
     : AudioProcessorEditor(&p), audioProcessor(p),
       tabLookAndFeel(customLookAndFeel),
+      visualizerTab(p.analyzerTap, p.apvts.state),
       tooltipWindow(this, 1500, customLookAndFeel) {
 
   // Load build hash from version.txt
@@ -140,7 +141,7 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   const auto tabBaseColour =
       juce::Colour::fromFloatRGBA(0.96f, 0.92f, 0.84f, 1.0f);
   configureTabButton(knobsTabButton, "KNOBS", tabBaseColour);
-  configureTabButton(page1TabButton, "1", tabBaseColour);
+  configureTabButton(page1TabButton, "VISUALIZERS", tabBaseColour);
   configureTabButton(page2TabButton, "2", tabBaseColour);
   configureTabButton(page3TabButton, "3", tabBaseColour);
   configureTabButton(page4TabButton, "4", tabBaseColour);
@@ -149,7 +150,7 @@ Vst_saturatorAudioProcessorEditor::Vst_saturatorAudioProcessorEditor(
   activeTab = TabPage::Knobs;
 
   knobsTabButton.onClick = [this]() { setActiveTab(TabPage::Knobs); };
-  page1TabButton.onClick = [this]() { setActiveTab(TabPage::Page1); };
+  page1TabButton.onClick = [this]() { setActiveTab(TabPage::Visualizers); };
   page2TabButton.onClick = [this]() { setActiveTab(TabPage::Page2); };
   page3TabButton.onClick = [this]() { setActiveTab(TabPage::Page3); };
   page4TabButton.onClick = [this]() { setActiveTab(TabPage::Page4); };
@@ -569,10 +570,6 @@ C'est comme zapper des lampes de radio. 📻)"));
   getConstrainer()->setFixedAspectRatio(static_cast<double>(DESIGN_WIDTH) /
                                         static_cast<double>(DESIGN_HEIGHT));
 
-  // Start a timer to update value labels and visualization
-  // 60 FPS ~ 16ms
-  startTimer(16);
-
   // Configure Signature Link
   signatureLink.setButtonText("by NeiXXa / Version : " + buildHash);
   signatureLink.setURL(juce::URL("https://soundcloud.com/neixxatek"));
@@ -582,6 +579,7 @@ C'est comme zapper des lampes de radio. 📻)"));
       customLookAndFeel.getCustomFont(24.0f, juce::Font::bold), false,
       juce::Justification::bottomRight);
   addAndMakeVisible(signatureLink);
+  addAndMakeVisible(visualizerTab);
 
   updateTabVisibility();
 }
@@ -597,6 +595,7 @@ void Vst_saturatorAudioProcessorEditor::setActiveTab(TabPage tab) {
 
 void Vst_saturatorAudioProcessorEditor::updateTabVisibility() {
   const bool showKnobs = activeTab == TabPage::Knobs;
+  const bool showVisualizers = activeTab == TabPage::Visualizers;
 
   saturationSlider.setVisible(showKnobs);
   shapeSlider.setVisible(showKnobs);
@@ -623,6 +622,8 @@ void Vst_saturatorAudioProcessorEditor::updateTabVisibility() {
   waveLeftBtn.setVisible(showKnobs);
   waveRightBtn.setVisible(showKnobs);
   signatureLink.setVisible(showKnobs);
+  visualizerTab.setVisible(showVisualizers);
+  visualizerTab.setActive(showVisualizers);
 }
 
 //==============================================================================
@@ -654,25 +655,6 @@ void Vst_saturatorAudioProcessorEditor::paint(juce::Graphics &g) {
   g.fillRect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
   g.setColour(juce::Colour::fromFloatRGBA(0.93f, 0.90f, 0.82f, 1.0f)); // Beige
   g.fillRect(0, 0, DESIGN_WIDTH, DESIGN_HEIGHT);
-
-  // === BACKGROUND WAVEFORM VISUALIZATION ===
-  // Draw subtle waveform behind everything (but on top of beige)
-  // Low contrast orange/brown
-  // Draw filled waveform zone (light orange)
-  g.setColour(juce::Colour::fromFloatRGBA(1.0f, 0.6f, 0.1f, 0.15f));
-  g.fillPath(waveFillPath);
-
-  // Optional: Brighter top edge line
-  g.setColour(juce::Colour::fromFloatRGBA(1.0f, 0.8f, 0.3f, 0.5f));
-  g.strokePath(wavePath,
-               juce::PathStrokeType(3.0f, juce::PathStrokeType::curved,
-                                    juce::PathStrokeType::rounded));
-
-  // Optional: Fill below the curve for a more solid look
-  // g.setColour(juce::Colour::fromFloatRGBA(1.0f, 0.6f, 0.1f, 0.05f));
-  // juce::Path fillPath = wavePath;
-  // fillPath.lineTo(DESIGN_WIDTH, DESIGN_HEIGHT / 2); // Close properly based
-  // on logic but straight stroke is cleaner for "Saturn" style usually.
 
   // Title (top-left, Serum style)
   g.setColour(juce::Colour::fromFloatRGBA(0.35f, 0.2f, 0.1f, 1.0f));
@@ -803,8 +785,8 @@ void Vst_saturatorAudioProcessorEditor::paint(juce::Graphics &g) {
   } else {
     juce::String pageLabel;
     switch (activeTab) {
-    case TabPage::Page1:
-      pageLabel = "1";
+    case TabPage::Visualizers:
+      pageLabel = "";
       break;
     case TabPage::Page2:
       pageLabel = "2";
@@ -910,6 +892,7 @@ void Vst_saturatorAudioProcessorEditor::resized() {
   const int tabHeight = 40;
   const int tabSpacing = 8;
   const int knobsTabWidth = 110;
+  const int visualizersTabWidth = 150;
   const int numberTabWidth = 40;
 
   const auto titleFont =
@@ -923,8 +906,8 @@ void Vst_saturatorAudioProcessorEditor::resized() {
       scaleDesignBounds(currentTabX, tabStartY, knobsTabWidth, tabHeight));
   currentTabX += knobsTabWidth + tabSpacing;
   page1TabButton.setBounds(
-      scaleDesignBounds(currentTabX, tabStartY, numberTabWidth, tabHeight));
-  currentTabX += numberTabWidth + tabSpacing;
+      scaleDesignBounds(currentTabX, tabStartY, visualizersTabWidth, tabHeight));
+  currentTabX += visualizersTabWidth + tabSpacing;
   page2TabButton.setBounds(
       scaleDesignBounds(currentTabX, tabStartY, numberTabWidth, tabHeight));
   currentTabX += numberTabWidth + tabSpacing;
@@ -1018,80 +1001,12 @@ void Vst_saturatorAudioProcessorEditor::resized() {
   signatureLink.setBounds(
       scaleDesignBounds(DESIGN_WIDTH - 350, DESIGN_HEIGHT - 32, 340, 26));
 
-  repaint();
-}
+  const int visualizerTop = 100;
+  const int visualizerBottomPadding = 60;
+  visualizerTab.setBounds(scaleDesignBounds(
+      contentStartX, visualizerTop, contentWidth,
+      DESIGN_HEIGHT - visualizerTop - visualizerBottomPadding));
 
-void Vst_saturatorAudioProcessorEditor::timerCallback() {
-  // 1. Read Visualization Data
-  // We recreate the path every frame.
-
-  // Copy data from processor's circular buffer
-  // We just take a snapshot of the buffer as is.
-  // Ideally we would trigger/sync, but for background decoration, scrolling is
-  // fine.
-
-  // Resize local buffer if needed
-  if (localWaveform.size() != Vst_saturatorAudioProcessor::visualizerBufferSize)
-    localWaveform.resize(Vst_saturatorAudioProcessor::visualizerBufferSize);
-
-  // Read blindly from the buffer (atomic read of index isn't strictly necessary
-  // for a blurry background view, but let's try to get a contiguous block logic
-  // if we want) The simplest way for a circular buffer visualizer is just to
-  // map the whole buffer to the screen width. It will "scroll" if the write
-  // pointer moves, which is what we want for an oscilloscope feel (or trigger).
-  // WITHOUT trigger, it will just be a mess usually.
-  // Simple "Trigger" logic: Find a zero crossing in the first 1/4 of buffer?
-  // Actually, for "Saturn style" background, a slow rolling wave is pretty.
-  // Let's just map the circular buffer starting from the current write index
-  // (oldest data).
-
-  int writeIndex =
-      audioProcessor.visualizerWriteIndex.load(std::memory_order_relaxed);
-
-  // Unroll the circular buffer into our local linear buffer
-  for (int i = 0; i < Vst_saturatorAudioProcessor::visualizerBufferSize; ++i) {
-    int index =
-        (writeIndex + i) % Vst_saturatorAudioProcessor::visualizerBufferSize;
-    localWaveform[(size_t)i] = audioProcessor.visualizerBuffer[(size_t)index];
-  }
-
-  // 2. Build Paths
-  wavePath.clear();
-  waveFillPath.clear();
-
-  // Map 512 samples to DESIGN_WIDTH (1300px)
-  // Center Y is DESIGN_HEIGHT / 2 (~425)
-  // Height amplitude: +/- 150px
-
-  float startX = 0.0f;
-  float endX = (float)DESIGN_WIDTH;
-  float centerY = (float)DESIGN_HEIGHT * 0.5f;
-  float amplitudeScale = 220.0f; // Slightly more dramatic
-
-  // We skip some samples to smoothen or just draw all points
-  int numSamples = (int)localWaveform.size();
-  float xStep = (endX - startX) / (float)(numSamples - 1);
-
-  // Start top line path
-  float startY = centerY - localWaveform[0] * amplitudeScale;
-  wavePath.startNewSubPath(startX, startY);
-  waveFillPath.startNewSubPath(startX, startY);
-
-  for (int i = 1; i < numSamples; ++i) {
-    float val = localWaveform[(size_t)i];
-    float x = startX + (float)i * xStep;
-    float y = centerY - val * amplitudeScale;
-    wavePath.lineTo(x, y);
-    waveFillPath.lineTo(x, y);
-  }
-
-  // Create the "zone" by closing the fill path until the bottom of the VST
-  // top-right -> bottom-right -> bottom-left -> top-left
-  waveFillPath.lineTo(endX, (float)DESIGN_HEIGHT);
-  waveFillPath.lineTo(startX, (float)DESIGN_HEIGHT);
-  waveFillPath.closeSubPath();
-
-  // Timer is used to trigger repaints
   repaint();
 }
 

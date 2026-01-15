@@ -18,6 +18,7 @@
 
 #pragma once
 
+#include "VisualizerAnalysis.h"
 #include <JuceHeader.h>
 #include <juce_dsp/juce_dsp.h>
 
@@ -81,10 +82,8 @@ public:
   // communication with the DAW (Automation) and the UI (Undo/Redo).
   juce::AudioProcessorValueTreeState apvts;
 
-  // === VISUALIZER DATA (Public for Editor access) ===
-  static const int visualizerBufferSize = 512;
-  std::array<float, visualizerBufferSize> visualizerBuffer;
-  std::atomic<int> visualizerWriteIndex{0};
+  AnalyzerTap analyzerTap;
+  void setAnalyzerEnabled(bool shouldEnable);
 
   // Envelope follower for UI reaction (Steve talking)
   std::atomic<float> currentRMSLevel{0.0f};
