@@ -299,46 +299,53 @@ CustomLookAndFeel::getSliderLayout(juce::Slider &slider) {
   return layout;
 }
 
-// Helper class for hover and click effects on labels
+// Helper class for forwarding knob drags while keeping a custom edit gesture.
 class HoverLabel : public juce::Label {
 public:
   HoverLabel() : juce::Label() {}
 
   void mouseEnter(const juce::MouseEvent &e) override {
     juce::Label::mouseEnter(e);
-    updateColour(true, false);
   }
 
   void mouseExit(const juce::MouseEvent &e) override {
     juce::Label::mouseExit(e);
-    updateColour(false, false);
   }
 
   void mouseDown(const juce::MouseEvent &e) override {
-    juce::Label::mouseDown(e);
-    updateColour(true, true);
+    if (e.getNumberOfClicks() >= 4) {
+      showEditor();
+      isForwardingDrag = false;
+      return;
+    }
+
+    forwardEventToSlider(&juce::Slider::mouseDown, e);
+    isForwardingDrag = true;
+  }
+
+  void mouseDrag(const juce::MouseEvent &e) override {
+    if (isForwardingDrag) {
+      forwardEventToSlider(&juce::Slider::mouseDrag, e);
+    }
   }
 
   void mouseUp(const juce::MouseEvent &e) override {
-    juce::Label::mouseUp(e);
-    updateColour(isMouseOver(), false);
+    if (isForwardingDrag) {
+      forwardEventToSlider(&juce::Slider::mouseUp, e);
+      isForwardingDrag = false;
+    }
   }
 
 private:
-  void updateColour(bool isHovered, bool isPressed) {
-    if (isPressed) {
-      // Stronger visual feedback: Darker pink/rose for click
-      setColour(juce::Label::backgroundColourId,
-                juce::Colour::fromFloatRGBA(0.9f, 0.50f, 0.60f, 0.8f));
-    } else if (isHovered) {
-      // Light pink background (Rose Clair)
-      setColour(juce::Label::backgroundColourId,
-                juce::Colour::fromFloatRGBA(1.0f, 0.75f, 0.85f, 0.5f));
-    } else {
-      setColour(juce::Label::backgroundColourId,
-                juce::Colours::transparentBlack);
+  template <typename Method>
+  void forwardEventToSlider(Method method, const juce::MouseEvent &e) {
+    if (auto *slider = dynamic_cast<juce::Slider *>(getParentComponent())) {
+      auto sliderEvent = e.getEventRelativeTo(slider);
+      (slider->*method)(sliderEvent);
     }
   }
+
+  bool isForwardingDrag = false;
 };
 
 // === CUSTOM TEXT BOX (Transparent, formatted) ===
@@ -362,8 +369,8 @@ juce::Label *CustomLookAndFeel::createSliderTextBox(juce::Slider &slider) {
   l->setFont(getCustomFont(22.0f, juce::Font::bold)); // Bold Pen Script
   l->setJustificationType(juce::Justification::centred);
 
-  // Crucial: Edit on DOUBLE CLICK
-  // This makes the label require a double click to enter edit mode.
+  // Crucial: Edit on QUADRUPLE CLICK
+  // This makes the label require four fast clicks to enter edit mode.
   // Single click won't trigger edit (so dragging works better).
   l->setEditable(false, true, false);
 

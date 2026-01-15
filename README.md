@@ -64,6 +64,11 @@ L'interface est divisée en **4 zones principales** super intuitives :
 
 ---
 
+## 🖱️ Édition rapide des valeurs
+
+- Faites glisser n'importe quel potard **même si vous êtes sur le chiffre central** : le drag fonctionne partout sur le knob.
+- Pour saisir une valeur au clavier, **cliquez 4 fois rapidement** sur le chiffre central pour ouvrir l'édition.
+
 ## 📊 Section 2 : Bandes de Fréquences (Centre)
 
 Le Steverator divise votre son en **3 bandes indépendantes** :
@@ -156,6 +161,11 @@ Whether you want to:
 
 **🚀 Quick Start:**
 1. Load the plugin → 2. Pick a Wave (try "Tube"!) → 3. Turn up Saturation → 4. Adjust Mix → 5. Enjoy! 🔥
+
+## 🖱️ Quick value editing
+
+- Drag any knob **even when your cursor is over the center number**: the knob responds everywhere.
+- To type a value, **click the center number 4 times quickly** to open the editor.
 
 </details>
 
