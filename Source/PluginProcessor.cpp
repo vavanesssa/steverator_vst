@@ -282,6 +282,8 @@ void Vst_saturatorAudioProcessor::prepareToPlay(double sampleRate,
   const float fadeTimeMs = 10.0f;
   deltaCrossfadeStep =
       1.0f / (fadeTimeMs * 0.001f * static_cast<float>(sampleRate));
+
+  analyzerTap.prepare(sampleRate);
 }
 
 void Vst_saturatorAudioProcessor::releaseResources() {
@@ -927,25 +929,7 @@ void Vst_saturatorAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
     limiter.process(juce::dsp::ProcessContextReplacing<float>(block));
   }
 
-  // === WRITE TO VISUALIZER BUFFER ===
-  // Sum to mono and write to circular buffer
-  // We only need ~512 samples for a frame. To avoid writing too fast (since
-  // audio is 44.1k+) we can just write every Nth sample or just write
-  // everything and let the GUI catch what it sees. Writing everything is
-  // smoother for the waveform.
-  const int numSamples = buffer.getNumSamples();
-  const int numChannels = buffer.getNumChannels();
-
-  if (numChannels > 0) {
-    const float *readPtr = buffer.getReadPointer(0); // Left channel or mono
-
-    for (int i = 0; i < numSamples; ++i) {
-      int idx = visualizerWriteIndex.load(std::memory_order_relaxed);
-      visualizerBuffer[static_cast<size_t>(idx)] = readPtr[i];
-      visualizerWriteIndex.store((idx + 1) % visualizerBufferSize,
-                                 std::memory_order_relaxed);
-    }
-  }
+  analyzerTap.pushSamples(dryBuffer, buffer);
 
   // === ENVELOPE FOLLOWER UPDATE ===
   // Calculate max peak of the output block to drive UI
@@ -959,6 +943,10 @@ void Vst_saturatorAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   // Pushing current peak is fine for "Is Talking" logic
   // We use atomic store
   currentRMSLevel.store(maxPeak, std::memory_order_relaxed);
+}
+
+void Vst_saturatorAudioProcessor::setAnalyzerEnabled(bool shouldEnable) {
+  analyzerTap.setEnabled(shouldEnable);
 }
 
 //==============================================================================

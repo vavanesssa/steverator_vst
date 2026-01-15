@@ -18,6 +18,7 @@
 
 #include "CustomLookAndFeel.h"
 #include "PluginProcessor.h"
+#include "VisualizerComponents.h"
 #include <JuceHeader.h>
 
 //==============================================================================
@@ -57,8 +58,7 @@ private:
   CustomLookAndFeel &baseLookAndFeel;
 };
 
-class Vst_saturatorAudioProcessorEditor : public juce::AudioProcessorEditor,
-                                          private juce::Timer {
+class Vst_saturatorAudioProcessorEditor : public juce::AudioProcessorEditor {
 public:
   // Constructor: Takes a reference to the Processor so we can access
   // parameters.
@@ -73,9 +73,6 @@ public:
   // Layout
   // Called when the window is resized. Position your components here.
   void resized() override;
-
-  // Timer callback for periodic repaints
-  void timerCallback() override;
 
 private:
   Vst_saturatorAudioProcessor &audioProcessor;
@@ -189,18 +186,20 @@ private:
   CustomLookAndFeel customLookAndFeel;
   TabLookAndFeel tabLookAndFeel;
 
-  enum class TabPage { Knobs, Page1, Page2, Page3, Page4 };
+  enum class TabPage { Knobs, Visualizers, Page2, Page3, Page4 };
 
   void setActiveTab(TabPage tab);
   void updateTabVisibility();
 
   // Tabs (top-left navigation)
   juce::TextButton knobsTabButton{"KNOBS"};
-  juce::TextButton page1TabButton{"1"};
+  juce::TextButton page1TabButton{"VISUALIZERS"};
   juce::TextButton page2TabButton{"2"};
   juce::TextButton page3TabButton{"3"};
   juce::TextButton page4TabButton{"4"};
   TabPage activeTab = TabPage::Knobs;
+
+  VisualizerTabComponent visualizerTab;
 
   // Steve image for left side display
   juce::Image steveImage;
@@ -215,11 +214,6 @@ private:
   // Helper to transform design coordinates to scaled window coordinates
   juce::Rectangle<int> scaleDesignBounds(int x, int y, int width,
                                          int height) const;
-
-  // Waveform visualization
-  juce::Path wavePath;
-  juce::Path waveFillPath;
-  std::vector<float> localWaveform;
 
   // Tooltip window
   ScrollableTooltipWindow tooltipWindow;
