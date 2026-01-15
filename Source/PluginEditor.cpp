@@ -1096,6 +1096,10 @@ void Vst_saturatorAudioProcessorEditor::initializePresets() {
   presets.push_back({"Wavelet FX", 57, 8.0f, 0.6f, 0.0f, 65.0f, -1.0f, true,
                      100.0f, 0.5f, 1.5f, true, 6000.0f, 0.5f, 1.5f, true,
                      true}); // Wavelet texture
+
+  for (auto &preset : presets) {
+    preset.limiter = false;
+  }
 }
 
 void Vst_saturatorAudioProcessorEditor::applyPreset(int presetIndex) {
