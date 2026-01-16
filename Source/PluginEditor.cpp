@@ -684,7 +684,9 @@ CPU, FPS, buffers, état des visualizers.)"));
   startTimerHz(4);
 }
 
-Vst_saturatorAudioProcessorEditor::~Vst_saturatorAudioProcessorEditor() {}
+Vst_saturatorAudioProcessorEditor::~Vst_saturatorAudioProcessorEditor() {
+  stopTimer();
+}
 
 //==============================================================================
 void Vst_saturatorAudioProcessorEditor::setActiveTab(TabPage tab) {
