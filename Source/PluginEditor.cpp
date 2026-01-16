@@ -801,8 +801,14 @@ Vst_saturatorAudioProcessorEditor::scaleDesignBounds(int x, int y, int width,
 //==============================================================================
 void Vst_saturatorAudioProcessorEditor::paint(juce::Graphics &g) {
   const auto nowMs = juce::Time::getMillisecondCounterHiRes();
-  if (lastUiPaintMs > 0.0)
-    uiFrameTimeMs = nowMs - lastUiPaintMs;
+  if (lastUiPaintMs > 0.0) {
+    const auto deltaMs = nowMs - lastUiPaintMs;
+    // Only treat short intervals as "active repaint" frame time to avoid
+    // misleadingly low FPS readings when the UI is idle and not repainting.
+    constexpr double kMaxActiveFrameGapMs = 1000.0; // 1 second
+    if (deltaMs <= kMaxActiveFrameGapMs)
+      uiFrameTimeMs = deltaMs;
+  }
   lastUiPaintMs = nowMs;
 
   // Fill entire window with background (including letterbox areas)
