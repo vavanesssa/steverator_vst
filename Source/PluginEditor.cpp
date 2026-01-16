@@ -762,10 +762,15 @@ void Vst_saturatorAudioProcessorEditor::refreshDevTools() {
       uiFrameTimeMs > 0.0 ? (1000.0 / uiFrameTimeMs) : 0.0;
   metrics.visualizerFrameTimeMs = visualizerTab.getLastFrameTimeMs();
   metrics.visualizerRefreshMs = visualizerTab.getRefreshIntervalMs();
-  metrics.visualizerFps =
-      metrics.visualizerRefreshMs > 0.0
-          ? (1000.0 / metrics.visualizerRefreshMs)
-          : 0.0;
+  {
+    const double refreshMs = metrics.visualizerRefreshMs;
+    const double maxVisualizerFps = 240.0;
+    if (refreshMs <= 0.0)
+      metrics.visualizerFps = 0.0;
+    else
+      metrics.visualizerFps =
+          juce::jlimit(0.0, maxVisualizerFps, 1000.0 / refreshMs);
+  }
   metrics.scaleFactor = scaleFactor;
   metrics.buildHash = buildHash;
   metrics.activeTabLabel = tabLabel(activeTab);
