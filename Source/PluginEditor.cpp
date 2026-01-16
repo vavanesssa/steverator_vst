@@ -1183,7 +1183,11 @@ void Vst_saturatorAudioProcessorEditor::resized() {
   const int popoverHeight = 310;
   int popoverX = devToolsButtonX;
   int popoverY = devToolsButtonY - popoverHeight - 12;
-  popoverY = juce::jmax(10, popoverY);
+  // Clamp popover Y so it stays fully within the design bounds vertically
+  int maxPopoverY = DESIGN_HEIGHT - popoverHeight - 10; // 10px bottom margin
+  if (maxPopoverY < 10)
+    maxPopoverY = 10;
+  popoverY = juce::jlimit(10, maxPopoverY, popoverY);
   devToolsPopover.setBounds(
       scaleDesignBounds(popoverX, popoverY, popoverWidth, popoverHeight));
 
