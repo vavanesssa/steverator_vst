@@ -740,8 +740,9 @@ juce::String Vst_saturatorAudioProcessorEditor::tabLabel(TabPage tab) const {
     return "Page 3";
   case TabPage::Page4:
     return "Page 4";
+  default:
+    return "Knobs";
   }
-  return "Knobs";
 }
 
 void Vst_saturatorAudioProcessorEditor::refreshDevTools() {
