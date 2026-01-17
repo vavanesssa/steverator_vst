@@ -88,6 +88,10 @@ public:
   // Envelope follower for UI reaction (Steve talking)
   std::atomic<float> currentRMSLevel{0.0f};
 
+  // CPU usage tracking for DevTools
+  double getCpuUsage() const { return cpuUsage.load(std::memory_order_relaxed); }
+  std::atomic<double> cpuUsage{0.0};
+
 private:
   // Helper function to define the parameters layout
   juce::AudioProcessorValueTreeState::ParameterLayout createParameterLayout();

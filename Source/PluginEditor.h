@@ -79,16 +79,31 @@ struct DevToolsMetrics {
   juce::String windowSize;
 };
 
+// Internal content component for DevTools (scrollable)
+class DevToolsContent final : public juce::Component {
+public:
+  void setLines(const juce::StringArray &leftCol, const juce::StringArray &rightCol);
+  void paint(juce::Graphics &g) override;
+  int getRequiredHeight() const;
+
+private:
+  juce::StringArray leftLines, rightLines;
+  static constexpr int lineHeight = 16;
+  static constexpr int padding = 8;
+};
+
 class DevToolsPopover final : public juce::Component {
 public:
   explicit DevToolsPopover(CustomLookAndFeel &laf);
   void setMetrics(const DevToolsMetrics &newMetrics);
   void paint(juce::Graphics &g) override;
+  void resized() override;
 
 private:
   CustomLookAndFeel &lookAndFeel;
   DevToolsMetrics metrics;
-  juce::StringArray lines;
+  DevToolsContent content;
+  juce::Viewport viewport;
 };
 
 class Vst_saturatorAudioProcessorEditor : public juce::AudioProcessorEditor,

@@ -308,6 +308,9 @@ bool Vst_saturatorAudioProcessor::isBusesLayoutSupported(
 //==============================================================================
 void Vst_saturatorAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
                                                juce::MidiBuffer &midiMessages) {
+  // CPU usage timing start
+  const auto cpuTimerStart = juce::Time::getHighResolutionTicks();
+
   juce::ignoreUnused(midiMessages);
   juce::ScopedNoDenormals noDenormals;
   auto totalNumInputChannels = getTotalNumInputChannels();
@@ -943,6 +946,18 @@ void Vst_saturatorAudioProcessor::processBlock(juce::AudioBuffer<float> &buffer,
   // Pushing current peak is fine for "Is Talking" logic
   // We use atomic store
   currentRMSLevel.store(maxPeak, std::memory_order_relaxed);
+
+  // CPU usage timing end
+  const auto cpuTimerEnd = juce::Time::getHighResolutionTicks();
+  const double elapsedSec = juce::Time::highResolutionTicksToSeconds(cpuTimerEnd - cpuTimerStart);
+  const double bufferDuration = static_cast<double>(buffer.getNumSamples()) / getSampleRate();
+  if (bufferDuration > 0.0) {
+    // Smooth the CPU reading (exponential moving average)
+    const double newCpu = elapsedSec / bufferDuration;
+    const double smoothing = 0.1; // lower = smoother
+    cpuUsage.store(cpuUsage.load(std::memory_order_relaxed) * (1.0 - smoothing) + newCpu * smoothing,
+                   std::memory_order_relaxed);
+  }
 }
 
 void Vst_saturatorAudioProcessor::setAnalyzerEnabled(bool shouldEnable) {
